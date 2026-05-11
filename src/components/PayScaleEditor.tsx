@@ -63,51 +63,58 @@ export default function PayScaleEditor({ payScale, onSave }: Props) {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-xl font-semibold text-gray-900 mb-4">Pay Scale Settings</h2>
-
-        {/* Tier Type Toggle */}
+      <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <div className="mb-6">
-          <label className="block text-sm font-medium text-gray-700 mb-2">
+          <p className="text-sm font-medium text-emerald-700">Configuration</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-950">Pay Scale Settings</h2>
+        </div>
+
+        <div className="mb-6">
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
             Commission Type
           </label>
-          <div className="flex gap-4">
-            <label className="flex items-center">
+          <div className="grid gap-2 sm:grid-cols-2">
+            <label className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+              tierType === 'retroactive' ? 'border-slate-900 bg-slate-50' : 'border-stone-200 bg-white'
+            }`}>
               <input
                 type="radio"
                 value="retroactive"
                 checked={tierType === 'retroactive'}
                 onChange={() => { setTierType('retroactive'); setSaved(false); }}
-                className="mr-2"
+                className="sr-only"
               />
-              <span className="text-sm">Retroactive (rate applies to all revenue)</span>
+              <span className="block text-sm font-semibold text-slate-950">Retroactive</span>
+              <span className="mt-1 block text-xs text-slate-500">Rate applies to all revenue.</span>
             </label>
-            <label className="flex items-center">
+            <label className={`cursor-pointer rounded-lg border p-3 transition-colors ${
+              tierType === 'marginal' ? 'border-slate-900 bg-slate-50' : 'border-stone-200 bg-white'
+            }`}>
               <input
                 type="radio"
                 value="marginal"
                 checked={tierType === 'marginal'}
                 onChange={() => { setTierType('marginal'); setSaved(false); }}
-                className="mr-2"
+                className="sr-only"
               />
-              <span className="text-sm">Marginal (rate applies only within tier)</span>
+              <span className="block text-sm font-semibold text-slate-950">Marginal</span>
+              <span className="mt-1 block text-xs text-slate-500">Rate applies only within each tier.</span>
             </label>
           </div>
         </div>
 
-        {/* Tiers Table */}
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
+        <div className="overflow-x-auto rounded-lg border border-stone-200">
+          <table className="min-w-full divide-y divide-stone-200">
+            <thead className="bg-stone-50">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Min Revenue</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Max Revenue</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase">Rate %</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Name</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Min Revenue</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Max Revenue</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">Rate %</th>
                 <th className="px-4 py-3"></th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="divide-y divide-stone-200 bg-white">
               {tiers.map((tier, index) => (
                 <tr key={index}>
                   <td className="px-4 py-3">
@@ -115,29 +122,29 @@ export default function PayScaleEditor({ payScale, onSave }: Props) {
                       type="text"
                       value={tier.name}
                       onChange={(e) => handleTierChange(index, 'name', e.target.value)}
-                      className="w-full px-2 py-1 border rounded text-sm"
+                      className="w-full rounded border border-stone-300 px-2 py-1 text-sm outline-none focus:border-slate-900"
                     />
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center">
-                      <span className="text-gray-500 mr-1">$</span>
+                      <span className="mr-1 text-slate-500">$</span>
                       <input
                         type="number"
                         value={tier.minRevenue}
                         onChange={(e) => handleTierChange(index, 'minRevenue', e.target.value)}
-                        className="w-28 px-2 py-1 border rounded text-sm"
+                        className="w-28 rounded border border-stone-300 px-2 py-1 text-sm outline-none focus:border-slate-900"
                       />
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     <div className="flex items-center">
-                      <span className="text-gray-500 mr-1">$</span>
+                      <span className="mr-1 text-slate-500">$</span>
                       <input
                         type="number"
                         value={tier.maxRevenue ?? ''}
                         placeholder="No limit"
                         onChange={(e) => handleTierChange(index, 'maxRevenue', e.target.value)}
-                        className="w-28 px-2 py-1 border rounded text-sm"
+                        className="w-28 rounded border border-stone-300 px-2 py-1 text-sm outline-none focus:border-slate-900"
                       />
                     </div>
                   </td>
@@ -148,16 +155,16 @@ export default function PayScaleEditor({ payScale, onSave }: Props) {
                         step="0.1"
                         value={(tier.rate * 100).toFixed(1)}
                         onChange={(e) => handleTierChange(index, 'rate', e.target.value)}
-                        className="w-20 px-2 py-1 border rounded text-sm"
+                        className="w-20 rounded border border-stone-300 px-2 py-1 text-sm outline-none focus:border-slate-900"
                       />
-                      <span className="text-gray-500 ml-1">%</span>
+                      <span className="ml-1 text-slate-500">%</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
                     {tiers.length > 1 && (
                       <button
                         onClick={() => removeTier(index)}
-                        className="text-red-600 hover:text-red-800 text-sm"
+                        className="text-sm font-semibold text-rose-600 hover:text-rose-800"
                       >
                         Remove
                       </button>
@@ -171,58 +178,55 @@ export default function PayScaleEditor({ payScale, onSave }: Props) {
 
         <button
           onClick={addTier}
-          className="mt-4 text-sm text-blue-600 hover:text-blue-800"
+          className="mt-4 rounded-md border border-stone-300 px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-50"
         >
           + Add Tier
         </button>
-      </div>
+      </section>
 
-      {/* Average Deal Size */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-2">
+      <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <label className="mb-2 block text-sm font-semibold text-slate-700">
           Average Deal Size (optional)
         </label>
-        <div className="flex items-center">
-          <span className="text-gray-500 mr-1">$</span>
+        <div className="flex max-w-xs items-center rounded-md border border-stone-300 bg-white px-3 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-200">
+          <span className="mr-1 text-slate-500">$</span>
           <input
             type="number"
             value={avgDealSize}
             onChange={(e) => { setAvgDealSize(e.target.value); setSaved(false); }}
             placeholder="e.g., 3000"
-            className="w-32 px-3 py-2 border rounded"
+            className="min-w-0 flex-1 py-2 outline-none"
           />
         </div>
-        <p className="text-xs text-gray-500 mt-1">
+        <p className="mt-1 text-xs text-slate-500">
           Used to estimate deals needed per day
         </p>
-      </div>
+      </section>
 
-      {/* Save Button */}
       <button
         onClick={handleSave}
-        className={`px-6 py-2 rounded font-medium transition-colors ${
+        className={`rounded-md px-6 py-3 font-semibold transition-colors ${
           saved
             ? 'bg-green-600 text-white'
-            : 'bg-blue-600 text-white hover:bg-blue-700'
+            : 'bg-slate-950 text-white hover:bg-slate-800'
         }`}
       >
         {saved ? 'Saved!' : 'Save Settings'}
       </button>
 
-      {/* Current Tiers Summary */}
-      <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Current Pay Scale Summary</h3>
-        <ul className="text-sm text-gray-600 space-y-1">
+      <section className="rounded-lg border border-stone-200 bg-stone-50 p-4">
+        <h3 className="mb-2 text-sm font-semibold text-slate-700">Current Pay Scale Summary</h3>
+        <ul className="space-y-1 text-sm text-slate-600">
           {tiers.map((tier, i) => (
             <li key={i}>
-              {tier.name}: ${tier.minRevenue.toLocaleString()} – {tier.maxRevenue ? `$${tier.maxRevenue.toLocaleString()}` : 'No limit'} at {formatPercent(tier.rate)}
+              {tier.name}: ${tier.minRevenue.toLocaleString()} - {tier.maxRevenue ? `$${tier.maxRevenue.toLocaleString()}` : 'No limit'} at {formatPercent(tier.rate)}
             </li>
           ))}
         </ul>
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="mt-2 text-xs text-slate-500">
           Type: {tierType === 'retroactive' ? 'Retroactive (full revenue at achieved tier rate)' : 'Marginal (each tier rate applies only within its range)'}
         </p>
-      </div>
+      </section>
     </div>
   );
 }

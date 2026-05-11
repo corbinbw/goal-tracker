@@ -9,8 +9,11 @@ export function usePayScale() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setPayScaleState(storage.getPayScale());
-    setLoading(false);
+    const timer = window.setTimeout(() => {
+      setPayScaleState(storage.getPayScale());
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const setPayScale = useCallback((scale: PayScale) => {
@@ -26,8 +29,11 @@ export function useGoalPlans() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setPlansState(storage.getGoalPlans());
-    setLoading(false);
+    const timer = window.setTimeout(() => {
+      setPlansState(storage.getGoalPlans());
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   const refresh = useCallback(() => {
@@ -54,12 +60,15 @@ export function useDailyEntries(planId: string | null) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (planId) {
-      setEntriesState(storage.getEntriesForPlan(planId));
-    } else {
-      setEntriesState([]);
-    }
-    setLoading(false);
+    const timer = window.setTimeout(() => {
+      if (planId) {
+        setEntriesState(storage.getEntriesForPlan(planId));
+      } else {
+        setEntriesState([]);
+      }
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
   }, [planId]);
 
   const refresh = useCallback(() => {

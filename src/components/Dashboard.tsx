@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { PayScale, GoalPlan, DailyEntry, DashboardStats } from '@/lib/types';
+import { PayScale, GoalPlan, DailyEntry } from '@/lib/types';
 import {
   calculateDashboardStats,
   calculateTierProjections,
@@ -38,6 +38,10 @@ export default function Dashboard({
   const projections = calculateTierProjections(stats.revenueSoFar, payScale.tiers);
   const today = getTodayISO();
   const todayEntry = entries.find(e => e.date === today);
+  const progressPercent = stats.revenueGoal > 0
+    ? Math.min((stats.revenueSoFar / stats.revenueGoal) * 100, 100)
+    : 0;
+  const averagePerLoggedDay = entries.length > 0 ? stats.revenueSoFar / entries.length : 0;
 
   const handleAddEntry = () => {
     const revenue = parseFloat(todayRevenue);
@@ -75,26 +79,50 @@ export default function Dashboard({
 
   return (
     <div className="space-y-6">
-      {/* Status Banner */}
       {goalReached && (
-        <div className="p-4 bg-green-100 border border-green-300 rounded-lg text-center">
-          <span className="text-green-800 font-semibold text-lg">Goal Reached!</span>
-          <p className="text-green-700 text-sm mt-1">
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-center">
+          <span className="text-lg font-semibold text-emerald-900">Goal Reached</span>
+          <p className="mt-1 text-sm text-emerald-700">
             You hit {formatCurrency(stats.revenueSoFar)} revenue
           </p>
         </div>
       )}
       {goalMissed && (
-        <div className="p-4 bg-red-100 border border-red-300 rounded-lg text-center">
-          <span className="text-red-800 font-semibold">Period Ended</span>
-          <p className="text-red-700 text-sm mt-1">
+        <div className="rounded-lg border border-rose-200 bg-rose-50 p-4 text-center">
+          <span className="font-semibold text-rose-900">Period Ended</span>
+          <p className="mt-1 text-sm text-rose-700">
             Fell short by {formatCurrency(stats.revenueRemaining)}
           </p>
         </div>
       )}
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+      <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <p className="text-sm font-medium text-slate-500">Progress</p>
+            <div className="mt-1 flex items-baseline gap-2">
+              <span className="text-3xl font-semibold text-slate-950">
+                {formatPercent(progressPercent / 100)}
+              </span>
+              <span className="text-sm text-slate-500">
+                of {formatCurrency(stats.revenueGoal)}
+              </span>
+            </div>
+          </div>
+          <div className="text-sm text-slate-500 sm:text-right">
+            <div>{formatCurrency(stats.revenueSoFar)} logged</div>
+            <div>{formatCurrency(stats.revenueRemaining)} remaining</div>
+          </div>
+        </div>
+        <div className="mt-5 h-3 overflow-hidden rounded-full bg-stone-100">
+          <div
+            className="h-full rounded-full bg-emerald-600 transition-all"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+      </section>
+
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-3">
         <StatCard
           label="Revenue Goal"
           value={formatCurrency(stats.revenueGoal)}
@@ -116,6 +144,11 @@ export default function Dashboard({
           variant={stats.workdaysRemaining <= 1 ? 'warning' : 'default'}
         />
         <StatCard
+          label="Average/Day"
+          value={formatCurrency(averagePerLoggedDay)}
+          subtext={entries.length > 0 ? 'logged days' : 'no entries yet'}
+        />
+        <StatCard
           label="Required/Day"
           value={formatCurrency(stats.requiredPerDay)}
           subtext="to hit goal"
@@ -131,8 +164,8 @@ export default function Dashboard({
 
       {/* Deals Estimate */}
       {stats.dealsNeeded !== null && (
-        <div className="p-3 bg-gray-50 rounded-lg text-center">
-          <span className="text-gray-600 text-sm">
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-center">
+          <span className="text-sm font-medium text-amber-900">
             Need ~<strong>{stats.dealsNeeded}</strong> more deals
             {stats.dealsPerDay !== null && stats.workdaysRemaining > 0 && (
               <> ({stats.dealsPerDay}/day)</>
@@ -143,31 +176,31 @@ export default function Dashboard({
 
       {/* Today's Entry */}
       {!goalReached && stats.workdaysRemaining > 0 && (
-        <div className="p-4 bg-white border rounded-lg shadow-sm">
-          <h3 className="font-medium text-gray-900 mb-3">
+        <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 font-semibold text-slate-950">
             {todayEntry ? "Update Today's Revenue" : "Log Today's Revenue"}
           </h3>
-          <div className="flex flex-col sm:flex-row gap-3">
-            <div className="flex items-center flex-1">
-              <span className="text-gray-500 mr-1">$</span>
+          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+            <label className="flex items-center rounded-md border border-stone-300 bg-white px-3 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-200">
+              <span className="mr-1 text-slate-500">$</span>
               <input
                 type="number"
                 value={todayRevenue}
                 onChange={(e) => setTodayRevenue(e.target.value)}
                 placeholder={todayEntry ? `Current: ${todayEntry.revenue}` : 'Revenue amount'}
-                className="flex-1 px-3 py-2 border rounded"
+                className="min-w-0 flex-1 py-2 outline-none"
               />
-            </div>
+            </label>
             <input
               type="text"
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               placeholder="Notes (optional)"
-              className="flex-1 px-3 py-2 border rounded"
+              className="rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
             />
             <button
               onClick={handleAddEntry}
-              className="px-6 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors"
+              className="rounded-md bg-slate-950 px-6 py-2 font-semibold text-white transition-colors hover:bg-slate-800"
             >
               {todayEntry ? 'Update' : 'Add'}
             </button>
@@ -177,58 +210,58 @@ export default function Dashboard({
 
       {/* Entries List */}
       {entries.length > 0 && (
-        <div className="bg-white border rounded-lg overflow-hidden">
-          <h3 className="font-medium text-gray-900 p-4 border-b bg-gray-50">
+        <div className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+          <h3 className="border-b border-stone-200 bg-stone-50 p-4 font-semibold text-slate-950">
             Daily Entries
           </h3>
-          <ul className="divide-y">
+          <ul className="divide-y divide-stone-200">
             {entries.slice().reverse().map((entry) => (
-              <li key={entry.id} className="p-3 flex items-center justify-between">
+              <li key={entry.id} className="flex items-center justify-between gap-3 p-4">
                 <div className="flex-1">
-                  <span className="text-gray-600 text-sm">{formatDate(entry.date)}</span>
+                  <span className="text-sm font-medium text-slate-500">{formatDate(entry.date)}</span>
                   {editingEntry === entry.id ? (
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-gray-500">$</span>
+                    <div className="mt-2 flex flex-wrap items-center gap-2">
+                      <span className="text-slate-500">$</span>
                       <input
                         type="number"
                         value={editValue}
                         onChange={(e) => setEditValue(e.target.value)}
-                        className="w-28 px-2 py-1 border rounded text-sm"
+                        className="w-28 rounded border border-stone-300 px-2 py-1 text-sm outline-none focus:border-slate-900"
                         autoFocus
                       />
                       <button
                         onClick={() => handleSaveEdit(entry)}
-                        className="text-blue-600 text-sm"
+                        className="text-sm font-semibold text-emerald-700"
                       >
                         Save
                       </button>
                       <button
                         onClick={() => setEditingEntry(null)}
-                        className="text-gray-500 text-sm"
+                        className="text-sm font-medium text-slate-500"
                       >
                         Cancel
                       </button>
                     </div>
                   ) : (
-                    <div className="font-medium text-gray-900">
+                    <div className="font-semibold text-slate-950">
                       {formatCurrency(entry.revenue)}
                       {entry.notes && (
-                        <span className="text-gray-500 text-sm ml-2">– {entry.notes}</span>
+                        <span className="ml-2 text-sm font-normal text-slate-500">- {entry.notes}</span>
                       )}
                     </div>
                   )}
                 </div>
                 {editingEntry !== entry.id && (
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <button
                       onClick={() => handleEditEntry(entry)}
-                      className="text-blue-600 hover:text-blue-800 text-sm"
+                      className="text-sm font-semibold text-slate-600 hover:text-slate-950"
                     >
                       Edit
                     </button>
                     <button
                       onClick={() => onDeleteEntry(entry.id)}
-                      className="text-red-600 hover:text-red-800 text-sm"
+                      className="text-sm font-semibold text-rose-600 hover:text-rose-800"
                     >
                       Delete
                     </button>
@@ -242,33 +275,33 @@ export default function Dashboard({
 
       {/* Tier Projections */}
       {projections.length > 0 && stats.revenueSoFar > 0 && (
-        <div className="bg-white border rounded-lg p-4">
-          <h3 className="font-medium text-gray-900 mb-3">What If I Hit...</h3>
+        <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-3 font-semibold text-slate-950">What If I Hit...</h3>
           <div className="space-y-2">
             {projections.map(({ tier, revenueNeeded, additionalRevenue, commission }) => (
               <div
                 key={tier.name}
-                className={`p-3 rounded ${
+                className={`rounded-md p-3 ${
                   stats.revenueSoFar >= tier.minRevenue
-                    ? 'bg-green-50 border border-green-200'
-                    : 'bg-gray-50'
+                    ? 'border border-emerald-200 bg-emerald-50'
+                    : 'bg-stone-50'
                 }`}
               >
                 <div className="flex justify-between items-center">
-                  <span className="font-medium">
+                  <span className="font-semibold text-slate-800">
                     {tier.name} ({formatPercent(tier.rate)})
                   </span>
-                  <span className="text-green-700 font-semibold">
+                  <span className="font-semibold text-emerald-700">
                     {formatCurrency(commission)} commission
                   </span>
                 </div>
                 {additionalRevenue > 0 && (
-                  <p className="text-sm text-gray-600 mt-1">
+                  <p className="mt-1 text-sm text-slate-600">
                     Need {formatCurrency(additionalRevenue)} more to reach {formatCurrency(revenueNeeded)}
                   </p>
                 )}
                 {stats.revenueSoFar >= tier.minRevenue && (
-                  <p className="text-sm text-green-600 mt-1">Currently in this tier</p>
+                  <p className="mt-1 text-sm font-medium text-emerald-700">Currently in this tier</p>
                 )}
               </div>
             ))}
@@ -277,10 +310,10 @@ export default function Dashboard({
       )}
 
       {/* End Plan Button */}
-      <div className="pt-4 border-t">
+      <div className="border-t border-stone-200 pt-4">
         <button
           onClick={onEndPlan}
-          className="text-gray-500 hover:text-gray-700 text-sm"
+          className="text-sm font-medium text-slate-500 hover:text-slate-900"
         >
           End This Plan / Start New
         </button>
@@ -304,21 +337,21 @@ function StatCard({
 }) {
   const bgColor = {
     default: 'bg-white',
-    success: 'bg-green-50',
+    success: 'bg-emerald-50',
     warning: 'bg-amber-50'
   }[variant];
 
   const textColor = {
-    default: highlight ? 'text-blue-600' : 'text-gray-900',
-    success: 'text-green-700',
+    default: highlight ? 'text-emerald-700' : 'text-slate-950',
+    success: 'text-emerald-700',
     warning: 'text-amber-700'
   }[variant];
 
   return (
-    <div className={`p-4 rounded-lg border ${bgColor}`}>
-      <div className="text-xs text-gray-500 uppercase tracking-wide">{label}</div>
-      <div className={`text-xl font-bold mt-1 ${textColor}`}>{value}</div>
-      {subtext && <div className="text-xs text-gray-500 mt-1">{subtext}</div>}
+    <div className={`rounded-lg border border-stone-200 p-4 shadow-sm ${bgColor}`}>
+      <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">{label}</div>
+      <div className={`mt-1 text-2xl font-semibold ${textColor}`}>{value}</div>
+      {subtext && <div className="mt-1 text-xs text-slate-500">{subtext}</div>}
     </div>
   );
 }

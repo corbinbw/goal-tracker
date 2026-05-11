@@ -11,27 +11,30 @@ type Tab = 'tracker' | 'new-goal' | 'settings';
 
 export default function Home() {
   const { payScale, setPayScale, loading: payScaleLoading } = usePayScale();
-  const { activePlan, savePlan, deletePlan, loading: plansLoading } = useGoalPlans();
-  const { entries, saveEntry, deleteEntry, refresh: refreshEntries } = useDailyEntries(activePlan?.id || null);
+  const { activePlan, savePlan, loading: plansLoading } = useGoalPlans();
+  const { entries, saveEntry, deleteEntry } = useDailyEntries(activePlan?.id || null);
 
   const [activeTab, setActiveTab] = useState<Tab>('tracker');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = window.setTimeout(() => setMounted(true), 0);
+    return () => window.clearTimeout(timer);
   }, []);
 
   useEffect(() => {
-    // Auto-switch to new-goal if no active plan
     if (mounted && !plansLoading && !activePlan && activeTab === 'tracker') {
-      setActiveTab('new-goal');
+      const timer = window.setTimeout(() => setActiveTab('new-goal'), 0);
+      return () => window.clearTimeout(timer);
     }
   }, [mounted, plansLoading, activePlan, activeTab]);
 
   if (!mounted || payScaleLoading || plansLoading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-gray-500">Loading...</div>
+      <div className="min-h-screen bg-stone-50 flex items-center justify-center">
+        <div className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm">
+          Loading...
+        </div>
       </div>
     );
   }
@@ -51,21 +54,24 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white border-b sticky top-0 z-10">
-        <div className="max-w-3xl mx-auto px-4">
-          <div className="flex items-center justify-between h-14">
-            <h1 className="text-lg font-bold text-gray-900">Goal Tracker</h1>
+    <div className="min-h-screen bg-stone-50 text-slate-950">
+      <header className="sticky top-0 z-10 border-b border-stone-200 bg-white/95 backdrop-blur">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6">
+          <div className="flex min-h-16 items-center justify-between gap-4 py-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-700">
+                Commission Pace
+              </p>
+              <h1 className="text-xl font-semibold text-slate-950">Goal Tracker</h1>
+            </div>
             {activePlan && (
-              <span className="text-sm text-gray-500">
+              <span className="rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-sm font-medium text-slate-600">
                 {activePlan.goalType === 'commission' ? 'Commission' : 'Revenue'} Goal
               </span>
             )}
           </div>
 
-          {/* Tabs */}
-          <nav className="flex gap-1 -mb-px">
+          <nav className="flex gap-2 overflow-x-auto pb-3">
             <TabButton
               active={activeTab === 'tracker'}
               onClick={() => setActiveTab('tracker')}
@@ -89,8 +95,7 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="max-w-3xl mx-auto px-4 py-6">
+      <main className="mx-auto max-w-5xl px-4 py-6 pb-12 sm:px-6">
         {activeTab === 'tracker' && activePlan && (
           <Dashboard
             plan={activePlan}
@@ -117,8 +122,7 @@ export default function Home() {
         )}
       </main>
 
-      {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 text-center text-xs text-gray-400">
+      <footer className="border-t border-stone-200 bg-white py-4 text-center text-xs font-medium text-stone-400">
         Commission Pace Tracker
       </footer>
     </div>
@@ -140,12 +144,12 @@ function TabButton({
     <button
       onClick={onClick}
       disabled={disabled}
-      className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+      className={`rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
         active
-          ? 'border-blue-600 text-blue-600'
+          ? 'bg-slate-950 text-white shadow-sm'
           : disabled
-          ? 'border-transparent text-gray-300 cursor-not-allowed'
-          : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+          ? 'cursor-not-allowed bg-stone-100 text-stone-300'
+          : 'bg-white text-slate-600 ring-1 ring-stone-200 hover:bg-stone-100 hover:text-slate-950'
       }`}
     >
       {children}
