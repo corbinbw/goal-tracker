@@ -267,3 +267,8 @@ select {
   background: #111815 !important;
   border-color: #2d3a33 !important;
 }
+
+.theme-dark .auth-panel {
+  background: #151d19 !important;
+  border-color: #344039 !important;
+}

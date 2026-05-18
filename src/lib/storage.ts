@@ -9,6 +9,15 @@ const STORAGE_KEYS = {
   HEAD_TO_HEAD: 'goalTracker_headToHead',
 };
 
+export interface AppDataSnapshot {
+  payScale: PayScale;
+  goalPlans: GoalPlan[];
+  dailyEntries: DailyEntry[];
+  dailyGoals: DailyGoal[];
+  dailyDeals: DailyDeal[];
+  headToHead: HeadToHeadCompetition[];
+}
+
 // Pay Scale
 export function getPayScale(): PayScale {
   if (typeof window === 'undefined') return DEFAULT_PAY_SCALE;
@@ -286,4 +295,24 @@ export function deleteHeadToHeadEntry(competitionId: string, entryId: string): v
 
   competition.buddyEntries = competition.buddyEntries.filter(entry => entry.id !== entryId);
   saveHeadToHeadCompetitions(competitions);
+}
+
+export function exportAppData(): AppDataSnapshot {
+  return {
+    payScale: getPayScale(),
+    goalPlans: getGoalPlans(),
+    dailyEntries: getDailyEntries(),
+    dailyGoals: getDailyGoals(),
+    dailyDeals: getDailyDeals(),
+    headToHead: getHeadToHeadCompetitions()
+  };
+}
+
+export function importAppData(data: Partial<AppDataSnapshot>): void {
+  if (data.payScale) savePayScale(data.payScale);
+  if (Array.isArray(data.goalPlans)) saveGoalPlans(data.goalPlans);
+  if (Array.isArray(data.dailyEntries)) saveDailyEntries(data.dailyEntries);
+  if (Array.isArray(data.dailyGoals)) saveDailyGoals(data.dailyGoals);
+  if (Array.isArray(data.dailyDeals)) saveDailyDeals(data.dailyDeals);
+  if (Array.isArray(data.headToHead)) saveHeadToHeadCompetitions(data.headToHead);
 }

@@ -7,8 +7,12 @@ import NewGoalForm from '@/components/NewGoalForm';
 import Dashboard from '@/components/Dashboard';
 import DailyCountdown from '@/components/DailyCountdown';
 import HeadToHead from '@/components/HeadToHead';
+import AuthPanel from '@/components/AuthPanel';
 import { DEFAULT_PAY_SCALE, GoalPlan, DailyDeal } from '@/lib/types';
 import { getTodayISO } from '@/lib/calculations';
+import { supabase } from '@/lib/supabase';
+import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStorage';
+import { User } from '@supabase/supabase-js';
 
 type Tab = 'today' | 'tracker' | 'new-goal' | 'settings';
 
@@ -39,6 +43,8 @@ export default function Home() {
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [mounted, setMounted] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [user, setUser] = useState<User | null>(null);
+  const [syncStatus, setSyncStatus] = useState('Local changes are saved on this device.');
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -47,6 +53,25 @@ export default function Home() {
       setMounted(true);
     }, 0);
     return () => window.clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    const client = supabase;
+    if (!client) return;
+
+    const loadUser = async () => {
+      const { data } = await client.auth.getUser();
+      setUser(data.user);
+      if (data.user) setSyncStatus('Signed in. Local changes can sync to cloud.');
+    };
+
+    loadUser();
+    const { data: listener } = client.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user || null);
+      setSyncStatus(session?.user ? 'Signed in. Local changes can sync to cloud.' : 'Signed out. Saving locally only.');
+    });
+
+    return () => listener.subscription.unsubscribe();
   }, []);
 
   if (!mounted || payScaleLoading || plansLoading || dailyLoading || allDealsLoading || competitionLoading || !dailyGoal) {
@@ -64,12 +89,14 @@ export default function Home() {
   const handleCreatePlan = (plan: GoalPlan) => {
     savePlan(plan);
     setActiveTab('tracker');
+    queueCloudSave();
   };
 
   const handleEndPlan = () => {
     if (activePlan) {
       savePlan({ ...activePlan, isActive: false });
       setActiveTab('new-goal');
+      queueCloudSave();
     }
   };
 
@@ -77,30 +104,68 @@ export default function Home() {
     addDeal(deal);
     refreshEntries();
     refreshAllDailyDeals();
+    queueCloudSave();
   };
 
   const handleDeleteDeal = (dealId: string) => {
     deleteDeal(dealId);
     refreshEntries();
     refreshAllDailyDeals();
+    queueCloudSave();
   };
 
   const handleUpdateDeal = (deal: DailyDeal) => {
     updateDeal(deal);
     refreshEntries();
     refreshAllDailyDeals();
+    queueCloudSave();
   };
 
   const handleClearDeals = () => {
     clearDeals();
     refreshEntries();
     refreshAllDailyDeals();
+    queueCloudSave();
   };
 
   const toggleTheme = () => {
     const nextTheme = theme === 'dark' ? 'light' : 'dark';
     setTheme(nextTheme);
     window.localStorage.setItem('goalTracker_theme', nextTheme);
+  };
+
+  const syncCloudSave = async () => {
+    if (!user) return;
+    try {
+      await saveCloudState(user);
+      setSyncStatus(`Saved to cloud at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
+    } catch (error) {
+      setSyncStatus(error instanceof Error ? error.message : 'Could not save to cloud.');
+    }
+  };
+
+  const syncCloudLoad = async () => {
+    if (!user) return;
+    try {
+      const cloudState = await loadCloudState(user);
+      if (!cloudState) {
+        setSyncStatus('No cloud save found yet. Save Cloud will create one.');
+        return;
+      }
+      applyCloudState(cloudState);
+      window.location.reload();
+    } catch (error) {
+      setSyncStatus(error instanceof Error ? error.message : 'Could not load cloud data.');
+    }
+  };
+
+  const queueCloudSave = () => {
+    if (!user) return;
+    window.setTimeout(() => {
+      saveCloudState(user)
+        .then(() => setSyncStatus('Auto-saved to cloud.'))
+        .catch(() => setSyncStatus('Cloud auto-save failed. Use Save Cloud to retry.'));
+    }, 0);
   };
 
   return (
@@ -158,25 +223,46 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 pb-12 sm:px-6">
+        <div className="mb-6">
+          <AuthPanel
+            user={user}
+            syncStatus={syncStatus}
+            onLoadCloud={syncCloudLoad}
+            onSaveCloud={syncCloudSave}
+          />
+        </div>
+
         {activeTab === 'today' && (
           <div className="space-y-6">
             <DailyCountdown
               date={today}
-              goal={dailyGoal}
-              deals={dailyDeals}
-              activePlan={activePlan}
-              onSaveGoal={saveDailyGoal}
-              onAddDeal={handleAddDeal}
-              onUpdateDeal={handleUpdateDeal}
-              onDeleteDeal={handleDeleteDeal}
+            goal={dailyGoal}
+            deals={dailyDeals}
+            activePlan={activePlan}
+            onSaveGoal={(goal) => {
+              saveDailyGoal(goal);
+              queueCloudSave();
+            }}
+            onAddDeal={handleAddDeal}
+            onUpdateDeal={handleUpdateDeal}
+            onDeleteDeal={handleDeleteDeal}
               onClearDeals={handleClearDeals}
             />
             <HeadToHead
               competition={competition}
               deals={allDailyDeals}
-              onSaveCompetition={saveCompetition}
-              onAddBuddyEntry={addBuddyEntry}
-              onDeleteBuddyEntry={deleteBuddyEntry}
+              onSaveCompetition={(nextCompetition) => {
+                saveCompetition(nextCompetition);
+                queueCloudSave();
+              }}
+              onAddBuddyEntry={(competitionId, entry) => {
+                addBuddyEntry(competitionId, entry);
+                queueCloudSave();
+              }}
+              onDeleteBuddyEntry={(competitionId, entryId) => {
+                deleteBuddyEntry(competitionId, entryId);
+                queueCloudSave();
+              }}
             />
           </div>
         )}
@@ -186,8 +272,14 @@ export default function Home() {
             plan={activePlan}
             entries={entries}
             payScale={currentPayScale}
-            onSaveEntry={saveEntry}
-            onDeleteEntry={deleteEntry}
+            onSaveEntry={(entry) => {
+              saveEntry(entry);
+              queueCloudSave();
+            }}
+            onDeleteEntry={(entryId) => {
+              deleteEntry(entryId);
+              queueCloudSave();
+            }}
             onEndPlan={handleEndPlan}
           />
         )}
@@ -223,7 +315,10 @@ export default function Home() {
         {activeTab === 'settings' && (
           <PayScaleEditor
             payScale={currentPayScale}
-            onSave={setPayScale}
+            onSave={(nextPayScale) => {
+              setPayScale(nextPayScale);
+              queueCloudSave();
+            }}
           />
         )}
       </main>
