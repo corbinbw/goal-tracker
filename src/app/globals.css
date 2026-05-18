@@ -23,3 +23,247 @@ input,
 select {
   font: inherit;
 }
+
+.app-shell {
+  background: #fafaf9;
+  color: #0f172a;
+}
+
+.app-header {
+  background: #fffdf8;
+  border-bottom: 1px solid #ded6c8;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.06);
+}
+
+.app-kicker {
+  color: #2563eb;
+}
+
+.app-title {
+  color: #0f172a;
+}
+
+.app-badge,
+.theme-toggle,
+.app-tab {
+  background: #ffffff;
+  border: 1px solid #e7e5e4;
+  color: #475569;
+}
+
+.theme-toggle:hover,
+.app-tab:hover {
+  background: #f5f5f4;
+  color: #0f172a;
+}
+
+.app-tab.active {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.12);
+}
+
+.app-tab.disabled {
+  background: #f5f5f4;
+  color: #d6d3d1;
+  cursor: not-allowed;
+}
+
+.app-footer {
+  background: #ffffff;
+  border-top: 1px solid #e7e5e4;
+  color: #a8a29e;
+}
+
+.pace-ring {
+  background:
+    radial-gradient(circle at center, #ffffff 58%, transparent 60%),
+    conic-gradient(#fbbf24 var(--pace-degrees), #e7e5e4 0deg);
+  color: #0f172a;
+  box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06);
+}
+
+.theme-dark {
+  background: #111614 !important;
+  color: #eef7f2 !important;
+}
+
+.theme-dark .app-header {
+  background: #101713;
+  border-bottom-color: #2d3a33;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.38);
+}
+
+.theme-dark .app-kicker {
+  color: #72b7ee;
+}
+
+.theme-dark .app-title {
+  color: #eef7f2;
+}
+
+.theme-dark .app-badge,
+.theme-dark .theme-toggle,
+.theme-dark .app-tab {
+  background: #121a16;
+  border-color: #64766b;
+  color: #c8d4cc;
+}
+
+.theme-dark .theme-toggle:hover,
+.theme-dark .app-tab:hover {
+  background: #1d2822;
+  border-color: #8fa096;
+  color: #eef7f2;
+}
+
+.theme-dark .app-tab.active {
+  background: #eef7f2;
+  border-color: #eef7f2;
+  color: #111614;
+  box-shadow: none;
+}
+
+.theme-dark .app-tab.disabled {
+  background: #121a16;
+  border-color: #344039;
+  color: #607168;
+}
+
+.theme-dark .app-footer {
+  background: #1a211e;
+  border-top-color: #344039;
+  color: #6f8077;
+}
+
+.theme-dark .pace-ring {
+  background:
+    radial-gradient(circle at center, #151d19 58%, transparent 60%),
+    conic-gradient(#f5c451 var(--pace-degrees), #344039 0deg);
+  color: #eef7f2;
+  box-shadow: inset 0 0 0 1px rgba(238, 247, 242, 0.08);
+}
+
+.theme-dark .bg-stone-50,
+.theme-dark .bg-white,
+.theme-dark .bg-white\/95 {
+  background-color: #1a211e !important;
+}
+
+.theme-dark .bg-stone-100 {
+  background-color: #26302b !important;
+}
+
+.theme-dark .bg-blue-700 {
+  background-color: #2563eb !important;
+}
+
+.theme-dark .hover\:bg-blue-800:hover {
+  background-color: #1d4ed8 !important;
+}
+
+.theme-dark .border-stone-200,
+.theme-dark .border-stone-300 {
+  border-color: #344039 !important;
+}
+
+.theme-dark .text-slate-950,
+.theme-dark .text-slate-900,
+.theme-dark .text-slate-800,
+.theme-dark .text-gray-900 {
+  color: #eef7f2 !important;
+}
+
+.theme-dark .text-slate-700,
+.theme-dark .text-slate-600,
+.theme-dark .text-slate-500,
+.theme-dark .text-stone-600,
+.theme-dark .text-stone-500 {
+  color: #a6b6ad !important;
+}
+
+.theme-dark input,
+.theme-dark select {
+  background-color: #121816 !important;
+  border-color: #344039 !important;
+  color: #eef7f2 !important;
+}
+
+.theme-dark input::placeholder {
+  color: #6f8077 !important;
+}
+
+.theme-dark .shadow-sm {
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.25) !important;
+}
+
+.theme-dark .pay-ledger {
+  background: #151d19 !important;
+  border-color: #344039 !important;
+}
+
+.theme-dark .pay-ledger-header {
+  background: #111815 !important;
+  border-color: #2d3a33 !important;
+}
+
+.theme-dark .pay-ledger-list > :not([hidden]) ~ :not([hidden]) {
+  border-color: #2d3a33 !important;
+}
+
+.theme-dark .pay-ledger-row {
+  background: #151d19;
+  border-color: #2d3a33 !important;
+}
+
+.theme-dark .pay-ledger-row:nth-child(even) {
+  background: #131a17;
+}
+
+.theme-dark .deal-line {
+  color: #b6c5bc !important;
+}
+
+.theme-dark .deal-line .text-slate-900 {
+  color: #eef7f2 !important;
+}
+
+.theme-dark .day-total {
+  color: #5f9cff !important;
+}
+
+.theme-dark .log-deal-button {
+  background: #26302b !important;
+  color: #c8d4cc !important;
+}
+
+.theme-dark .log-deal-button:hover {
+  background: #304039 !important;
+  color: #eef7f2 !important;
+}
+
+.theme-dark .funded-toggle.is-funded {
+  background: #c7f5dc !important;
+  color: #135c3b !important;
+}
+
+.theme-dark .funded-toggle.is-signed {
+  background: #26302b !important;
+  color: #a6b6ad !important;
+}
+
+.theme-dark .funded-toggle.is-signed:hover {
+  background: #304039 !important;
+  color: #eef7f2 !important;
+}
+
+.theme-dark .head-to-head {
+  background: #151d19 !important;
+  border-color: #344039 !important;
+}
+
+.theme-dark .head-to-head-header {
+  background: #111815 !important;
+  border-color: #2d3a33 !important;
+}

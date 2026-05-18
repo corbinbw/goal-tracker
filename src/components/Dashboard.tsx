@@ -30,14 +30,15 @@ export default function Dashboard({
   onEndPlan
 }: Props) {
   const [todayRevenue, setTodayRevenue] = useState<string>('');
+  const [driverName, setDriverName] = useState<string>('');
+  const [dealTag, setDealTag] = useState<string>('');
   const [notes, setNotes] = useState<string>('');
+  const [entryDate, setEntryDate] = useState<string>(getTodayISO());
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
 
   const stats = calculateDashboardStats(plan, entries, payScale);
   const projections = calculateTierProjections(stats.revenueSoFar, payScale.tiers);
-  const today = getTodayISO();
-  const todayEntry = entries.find(e => e.date === today);
   const progressPercent = stats.revenueGoal > 0
     ? Math.min((stats.revenueSoFar / stats.revenueGoal) * 100, 100)
     : 0;
@@ -48,15 +49,20 @@ export default function Dashboard({
     if (isNaN(revenue) || revenue < 0) return;
 
     const entry: DailyEntry = {
-      id: todayEntry?.id || generateId(),
+      id: generateId(),
       goalPlanId: plan.id,
-      date: today,
+      date: entryDate,
       revenue,
-      notes: notes || null
+      notes: notes || null,
+      driverName: driverName || null,
+      dealTag: dealTag || null,
+      funded: false
     };
 
     onSaveEntry(entry);
     setTodayRevenue('');
+    setDriverName('');
+    setDealTag('');
     setNotes('');
   };
 
@@ -96,6 +102,15 @@ export default function Dashboard({
         </div>
       )}
 
+      {(plan.startDate || plan.endDate) && (
+        <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
+          <p className="text-sm font-medium text-slate-500">Pay Period</p>
+          <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+            {plan.startDate ? formatDate(plan.startDate) : 'Start'} - {plan.endDate ? formatDate(plan.endDate) : 'Open'}
+          </h2>
+        </section>
+      )}
+
       <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -110,7 +125,8 @@ export default function Dashboard({
             </div>
           </div>
           <div className="text-sm text-slate-500 sm:text-right">
-            <div>{formatCurrency(stats.revenueSoFar)} logged</div>
+            <div>{formatCurrency(stats.fundedRevenue)} funded</div>
+            <div>{formatCurrency(stats.signedRevenue)} signed</div>
             <div>{formatCurrency(stats.revenueRemaining)} remaining</div>
           </div>
         </div>
@@ -129,9 +145,14 @@ export default function Dashboard({
           subtext={plan.goalType === 'commission' ? `(${formatCurrency(plan.goalAmount)} commission)` : undefined}
         />
         <StatCard
-          label="Revenue So Far"
-          value={formatCurrency(stats.revenueSoFar)}
-          highlight={stats.revenueSoFar > 0}
+          label="Funded Revenue"
+          value={formatCurrency(stats.fundedRevenue)}
+          highlight={stats.fundedRevenue > 0}
+        />
+        <StatCard
+          label="Signed Revenue"
+          value={formatCurrency(stats.signedRevenue)}
+          highlight={stats.signedRevenue > 0}
         />
         <StatCard
           label="Remaining"
@@ -174,38 +195,69 @@ export default function Dashboard({
         </div>
       )}
 
-      {/* Today's Entry */}
+      {/* Pay Period Entry */}
       {!goalReached && stats.workdaysRemaining > 0 && (
         <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 font-semibold text-slate-950">
-            {todayEntry ? "Update Today's Revenue" : "Log Today's Revenue"}
+            Log Deal Revenue
           </h3>
-          <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+          <div className="grid gap-3 lg:grid-cols-[160px_1fr_1fr_1fr_auto]">
+            <input
+              type="date"
+              value={entryDate}
+              min={plan.startDate || undefined}
+              max={plan.endDate || undefined}
+              onChange={(e) => setEntryDate(e.target.value)}
+              className="rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+            />
             <label className="flex items-center rounded-md border border-stone-300 bg-white px-3 focus-within:border-slate-900 focus-within:ring-2 focus-within:ring-slate-200">
               <span className="mr-1 text-slate-500">$</span>
               <input
                 type="number"
                 value={todayRevenue}
                 onChange={(e) => setTodayRevenue(e.target.value)}
-                placeholder={todayEntry ? `Current: ${todayEntry.revenue}` : 'Revenue amount'}
+                placeholder="Revenue amount"
                 className="min-w-0 flex-1 py-2 outline-none"
               />
             </label>
             <input
               type="text"
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes (optional)"
+              value={driverName}
+              onChange={(e) => setDriverName(e.target.value)}
+              placeholder="Driver name"
+              className="rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+            />
+            <input
+              type="text"
+              value={dealTag}
+              onChange={(e) => setDealTag(e.target.value)}
+              placeholder="Deal tag / link"
               className="rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
             />
             <button
               onClick={handleAddEntry}
               className="rounded-md bg-slate-950 px-6 py-2 font-semibold text-white transition-colors hover:bg-slate-800"
             >
-              {todayEntry ? 'Update' : 'Add'}
+              Add
             </button>
           </div>
         </div>
+      )}
+
+      {(plan.startDate || plan.endDate) && (
+        <PayPeriodLedger
+          startDate={plan.startDate}
+          endDate={plan.endDate}
+          entries={entries}
+          onToggleFunded={(entry) => onSaveEntry({ ...entry, funded: !entry.funded })}
+          onSelectDate={(date) => {
+            setEntryDate(date);
+            setTodayRevenue('');
+            setDriverName('');
+            setDealTag('');
+            setNotes('');
+          }}
+        />
       )}
 
       {/* Entries List */}
@@ -245,8 +297,13 @@ export default function Dashboard({
                   ) : (
                     <div className="font-semibold text-slate-950">
                       {formatCurrency(entry.revenue)}
-                      {entry.notes && (
-                        <span className="ml-2 text-sm font-normal text-slate-500">- {entry.notes}</span>
+                      <span className={`ml-2 rounded-full px-2 py-0.5 text-xs font-semibold ${entry.funded ? 'bg-emerald-100 text-emerald-800' : 'bg-stone-100 text-slate-600'}`}>
+                        {entry.funded ? 'Funded' : 'Signed'}
+                      </span>
+                      {(entry.driverName || entry.dealTag || entry.notes) && (
+                        <span className="ml-2 text-sm font-normal text-slate-500">
+                          - {[entry.driverName, entry.dealTag, entry.notes].filter(Boolean).join(' · ')}
+                        </span>
                       )}
                     </div>
                   )}
@@ -320,6 +377,108 @@ export default function Dashboard({
       </div>
     </div>
   );
+}
+
+function PayPeriodLedger({
+  startDate,
+  endDate,
+  entries,
+  onToggleFunded,
+  onSelectDate
+}: {
+  startDate: string | null;
+  endDate: string | null;
+  entries: DailyEntry[];
+  onToggleFunded: (entry: DailyEntry) => void;
+  onSelectDate: (date: string) => void;
+}) {
+  const dates = getPayPeriodDates(startDate, endDate);
+
+  if (dates.length === 0) return null;
+
+  return (
+    <section className="pay-ledger overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+      <div className="pay-ledger-header border-b border-stone-200 bg-stone-50 p-4">
+        <h3 className="font-semibold text-slate-950">Pay Period Ledger</h3>
+        <p className="mt-1 text-sm text-slate-500">
+          Monday-Saturday dates from your pay period. Click a day to log or update it.
+        </p>
+      </div>
+      <ul className="pay-ledger-list divide-y divide-stone-200">
+        {dates.map((date) => {
+          const dayEntries = entries.filter(item => item.date === date);
+          const dayTotal = dayEntries.reduce((sum, entry) => sum + entry.revenue, 0);
+
+          return (
+            <li key={date} className="pay-ledger-row grid gap-3 p-4 sm:grid-cols-[1fr_auto]">
+              <div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="font-semibold text-slate-950">{formatDate(date)}</div>
+                  <button
+                    type="button"
+                    onClick={() => onSelectDate(date)}
+                    className="log-deal-button rounded-full bg-stone-100 px-2 py-0.5 text-xs font-semibold text-slate-600 hover:bg-stone-200"
+                  >
+                    Log deal
+                  </button>
+                </div>
+                {dayEntries.length === 0 ? (
+                  <div className="mt-1 text-sm text-slate-500">No revenue logged yet</div>
+                ) : (
+                  <div className="mt-2 space-y-1">
+                    {dayEntries.map((entry) => (
+                      <div key={entry.id} className="deal-line flex flex-wrap items-center gap-2 text-sm text-slate-600">
+                        <span className="font-semibold text-slate-900">{formatCurrency(entry.revenue)}</span>
+                        {entry.driverName && <span>{entry.driverName}</span>}
+                        {entry.dealTag && <span>· {entry.dealTag}</span>}
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onToggleFunded(entry);
+                          }}
+                          className={`funded-toggle rounded-full px-2 py-0.5 text-xs font-semibold transition-colors ${
+                            entry.funded
+                              ? 'is-funded bg-emerald-100 text-emerald-800'
+                              : 'is-signed bg-stone-100 text-slate-600 hover:bg-stone-200'
+                          }`}
+                        >
+                          {entry.funded ? 'Funded' : 'Signed'}
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className={`day-total text-right text-lg font-bold ${dayEntries.length > 0 ? 'text-blue-700' : 'text-slate-300'}`}>
+                {formatCurrency(dayTotal)}
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+}
+
+function getPayPeriodDates(startDate: string | null, endDate: string | null): string[] {
+  if (!startDate || !endDate) return [];
+
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return [];
+
+  const dates: string[] = [];
+  const current = new Date(start);
+
+  while (current <= end) {
+    if (current.getDay() !== 0) {
+      dates.push(current.toISOString().split('T')[0]);
+    }
+    current.setDate(current.getDate() + 1);
+  }
+
+  return dates;
 }
 
 function StatCard({

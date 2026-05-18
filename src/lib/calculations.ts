@@ -111,9 +111,12 @@ export function calculateDashboardStats(
   entries: DailyEntry[],
   payScale: PayScale
 ): DashboardStats {
-  const revenueSoFar = entries.reduce((sum, entry) => sum + entry.revenue, 0);
+  const signedRevenue = entries.reduce((sum, entry) => sum + entry.revenue, 0);
+  const fundedEntries = entries.filter(entry => entry.funded);
+  const fundedRevenue = fundedEntries.reduce((sum, entry) => sum + entry.revenue, 0);
+  const revenueSoFar = fundedRevenue;
   const revenueRemaining = Math.max(plan.revenueTarget - revenueSoFar, 0);
-  const workdaysUsed = entries.length;
+  const workdaysUsed = new Set(entries.map(entry => entry.date)).size;
   const workdaysRemaining = Math.max(plan.workdaysTotal - workdaysUsed, 0);
   const requiredPerDay = workdaysRemaining > 0 ? revenueRemaining / workdaysRemaining : revenueRemaining;
 
@@ -132,6 +135,10 @@ export function calculateDashboardStats(
     revenueGoal: plan.revenueTarget,
     revenueSoFar,
     revenueRemaining,
+    signedRevenue,
+    fundedRevenue,
+    signedDeals: entries.length,
+    fundedDeals: fundedEntries.length,
     workdaysTotal: plan.workdaysTotal,
     workdaysUsed,
     workdaysRemaining,

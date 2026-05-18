@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PayScale, GoalPlan, DailyEntry } from '@/lib/types';
+import { PayScale, GoalPlan, DailyEntry, DailyGoal, DailyDeal, HeadToHeadCompetition, HeadToHeadEntry } from '@/lib/types';
 import * as storage from '@/lib/storage';
 
 export function usePayScale() {
@@ -93,4 +93,132 @@ export function useDailyEntries(planId: string | null) {
   }, [planId]);
 
   return { entries, saveEntry, deleteEntry, getEntryForDate, loading, refresh };
+}
+
+export function useDailyCountdown(date: string, activePlanId: string | null) {
+  const [goal, setGoalState] = useState<DailyGoal | null>(null);
+  const [deals, setDealsState] = useState<DailyDeal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const syncPlanEntry = useCallback((nextDeals: DailyDeal[]) => {
+    if (!activePlanId) return;
+    storage.syncDailyDealsToPlanEntries(activePlanId, date, nextDeals);
+  }, [activePlanId, date]);
+
+  const refresh = useCallback(() => {
+    setGoalState(storage.getDailyGoal(date));
+    setDealsState(storage.getDealsForDate(date));
+  }, [date]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      refresh();
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  const saveGoal = useCallback((nextGoal: DailyGoal) => {
+    storage.saveDailyGoal(nextGoal);
+    setGoalState(nextGoal);
+  }, []);
+
+  const addDeal = useCallback((deal: DailyDeal) => {
+    storage.saveDailyDeal(deal);
+    const nextDeals = storage.getDealsForDate(date);
+    setDealsState(nextDeals);
+    syncPlanEntry(nextDeals);
+  }, [date, syncPlanEntry]);
+
+  const deleteDeal = useCallback((dealId: string) => {
+    storage.deleteDailyDeal(dealId);
+    const nextDeals = storage.getDealsForDate(date);
+    setDealsState(nextDeals);
+    syncPlanEntry(nextDeals);
+  }, [date, syncPlanEntry]);
+
+  const updateDeal = useCallback((deal: DailyDeal) => {
+    storage.saveDailyDeal(deal);
+    const nextDeals = storage.getDealsForDate(date);
+    setDealsState(nextDeals);
+    syncPlanEntry(nextDeals);
+  }, [date, syncPlanEntry]);
+
+  const clearDeals = useCallback(() => {
+    storage.clearDealsForDate(date);
+    setDealsState([]);
+    syncPlanEntry([]);
+  }, [date, syncPlanEntry]);
+
+  return {
+    goal,
+    deals,
+    loading,
+    saveGoal,
+    addDeal,
+    updateDeal,
+    deleteDeal,
+    clearDeals,
+    refresh
+  };
+}
+
+export function useAllDailyDeals() {
+  const [deals, setDealsState] = useState<DailyDeal[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    setDealsState(storage.getDailyDeals());
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      refresh();
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  return { deals, loading, refresh };
+}
+
+export function useHeadToHeadCompetition() {
+  const [competition, setCompetitionState] = useState<HeadToHeadCompetition | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    setCompetitionState(storage.getActiveHeadToHeadCompetition());
+  }, []);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      refresh();
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  const saveCompetition = useCallback((nextCompetition: HeadToHeadCompetition) => {
+    storage.saveHeadToHeadCompetition(nextCompetition);
+    refresh();
+  }, [refresh]);
+
+  const addBuddyEntry = useCallback((competitionId: string, entry: HeadToHeadEntry) => {
+    storage.addHeadToHeadEntry(competitionId, entry);
+    refresh();
+  }, [refresh]);
+
+  const deleteBuddyEntry = useCallback((competitionId: string, entryId: string) => {
+    storage.deleteHeadToHeadEntry(competitionId, entryId);
+    refresh();
+  }, [refresh]);
+
+  return {
+    competition,
+    loading,
+    saveCompetition,
+    addBuddyEntry,
+    deleteBuddyEntry,
+    refresh
+  };
 }

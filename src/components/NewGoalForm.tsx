@@ -6,6 +6,7 @@ import {
   calculateRevenueForCommissionGoal,
   formatCurrency,
   formatPercent,
+  formatDate,
   generateId,
   getTodayISO
 } from '@/lib/calculations';
@@ -16,10 +17,24 @@ interface Props {
 }
 
 export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
+  const today = getTodayISO();
+  const defaultEndDate = addDays(today, 13);
   const [goalType, setGoalType] = useState<'commission' | 'revenue'>('commission');
   const [goalAmount, setGoalAmount] = useState<string>('');
-  const [workdays, setWorkdays] = useState<string>('5');
+  const [startDate, setStartDate] = useState<string>(today);
+  const [endDate, setEndDate] = useState<string>(defaultEndDate);
+  const [workdays, setWorkdays] = useState<string>(countPayPeriodDays(today, defaultEndDate).toString());
   const [targetTier, setTargetTier] = useState<string>('auto');
+
+  const updateStartDate = (date: string) => {
+    setStartDate(date);
+    setWorkdays(countPayPeriodDays(date, endDate).toString());
+  };
+
+  const updateEndDate = (date: string) => {
+    setEndDate(date);
+    setWorkdays(countPayPeriodDays(startDate, date).toString());
+  };
 
   const calculatePlan = () => {
     const amount = parseFloat(goalAmount) || 0;
@@ -61,13 +76,13 @@ export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
 
     const plan: GoalPlan = {
       id: generateId(),
-      createdAt: getTodayISO(),
+      createdAt: today,
       goalType,
       goalAmount: parseFloat(goalAmount),
       revenueTarget: preview.revenueTarget,
       workdaysTotal: parseInt(workdays) || 5,
-      startDate: getTodayISO(),
-      endDate: null,
+      startDate,
+      endDate,
       isActive: true
     };
 
@@ -158,9 +173,34 @@ export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
         </div>
       )}
 
+      <div className="grid gap-3 sm:grid-cols-2">
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Pay Period Start
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => updateStartDate(e.target.value)}
+            className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+          />
+        </div>
+        <div>
+          <label className="mb-2 block text-sm font-semibold text-slate-700">
+            Pay Period End
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => updateEndDate(e.target.value)}
+            className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+          />
+        </div>
+      </div>
+
       <div>
         <label className="mb-2 block text-sm font-semibold text-slate-700">
-          Workdays This Period
+          Counted Days
         </label>
         <input
           type="number"
@@ -170,6 +210,9 @@ export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
           max="31"
           className="w-24 rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
         />
+        <p className="mt-1 text-xs text-slate-500">
+          Auto-counts Monday-Saturday. You can override it.
+        </p>
       </div>
 
       <button
@@ -193,6 +236,12 @@ export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
             </div>
           </div>
           <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="rounded-md bg-stone-50 p-3">
+              <span className="text-slate-500">Pay Period</span>
+              <div className="mt-1 font-semibold text-slate-950">
+                {formatDate(startDate)} - {formatDate(endDate)}
+              </div>
+            </div>
             <div className="rounded-md bg-stone-50 p-3">
               <span className="text-slate-500">Daily Target</span>
               <div className="mt-1 font-semibold text-slate-950">
@@ -227,4 +276,26 @@ export default function NewGoalForm({ payScale, onCreatePlan }: Props) {
       </aside>
     </div>
   );
+}
+
+function addDays(dateStr: string, days: number): string {
+  const date = new Date(`${dateStr}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split('T')[0];
+}
+
+function countPayPeriodDays(startDate: string, endDate: string): number {
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end < start) return 1;
+
+  let count = 0;
+  const current = new Date(start);
+
+  while (current <= end) {
+    if (current.getDay() !== 0) count += 1;
+    current.setDate(current.getDate() + 1);
+  }
+
+  return Math.max(count, 1);
 }

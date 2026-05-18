@@ -32,12 +32,53 @@ export interface DailyEntry {
   date: string; // ISO date string YYYY-MM-DD
   revenue: number;
   notes: string | null;
+  driverName?: string | null;
+  dealTag?: string | null;
+  funded?: boolean;
+  syncedDealId?: string | null;
+}
+
+export interface DailyGoal {
+  date: string; // ISO date string YYYY-MM-DD
+  revenueGoal: number;
+  closeGoal: number;
+}
+
+export interface DailyDeal {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  revenue: number;
+  name: string;
+  dealTag?: string | null;
+  createdAt: string;
+  funded?: boolean;
+}
+
+export interface HeadToHeadEntry {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  revenue: number;
+  createdAt: string;
+}
+
+export interface HeadToHeadCompetition {
+  id: string;
+  buddyName: string;
+  startDate: string;
+  endDate: string;
+  createdAt: string;
+  isActive: boolean;
+  buddyEntries: HeadToHeadEntry[];
 }
 
 export interface DashboardStats {
   revenueGoal: number;
   revenueSoFar: number;
   revenueRemaining: number;
+  signedRevenue: number;
+  fundedRevenue: number;
+  signedDeals: number;
+  fundedDeals: number;
   workdaysTotal: number;
   workdaysUsed: number;
   workdaysRemaining: number;
