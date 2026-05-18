@@ -38,26 +38,35 @@ export default function DailyCountdown({
   const fundedRevenue = deals.filter(deal => deal.funded).reduce((sum, deal) => sum + deal.revenue, 0);
   const dealsLogged = deals.length;
   const fundedDeals = deals.filter(deal => deal.funded).length;
+  const hasRevenueGoal = goal.revenueGoal > 0;
+  const hasCloseGoal = goal.closeGoal > 0;
+  const hasAnyGoal = hasRevenueGoal || hasCloseGoal;
   const revenueRemaining = Math.max(goal.revenueGoal - totalRevenue, 0);
   const closesRemaining = Math.max(goal.closeGoal - dealsLogged, 0);
-  const revenuePercent = goal.revenueGoal > 0
+  const revenuePercent = hasRevenueGoal
     ? Math.min((totalRevenue / goal.revenueGoal) * 100, 100)
     : 0;
-  const closesPercent = goal.closeGoal > 0
+  const closesPercent = hasCloseGoal
     ? Math.min((dealsLogged / goal.closeGoal) * 100, 100)
     : 0;
-  const blendedPercent = Math.round((revenuePercent + closesPercent) / 2);
+  const activeGoalCount = Number(hasRevenueGoal) + Number(hasCloseGoal);
+  const blendedPercent = activeGoalCount > 0
+    ? Math.round((revenuePercent + closesPercent) / activeGoalCount)
+    : 0;
   const averageDeal = dealsLogged > 0 ? totalRevenue / dealsLogged : 0;
-  const revenueDone = goal.revenueGoal > 0 && revenueRemaining === 0;
-  const closesDone = goal.closeGoal > 0 && closesRemaining === 0;
+  const revenueDone = hasRevenueGoal && revenueRemaining === 0;
+  const closesDone = hasCloseGoal && closesRemaining === 0;
 
   const paceText = useMemo(() => {
-    if (revenueDone && closesDone) return 'Daily board cleared.';
-    if (revenueDone) return `Revenue hit. ${closesRemaining} close${closesRemaining === 1 ? '' : 's'} left.`;
-    if (closesDone) return `Close count hit. ${formatCurrency(revenueRemaining)} left.`;
+    if (!hasAnyGoal) return 'Set today\'s goal to start tracking.';
+    if ((hasRevenueGoal ? revenueDone : true) && (hasCloseGoal ? closesDone : true)) return 'Daily board cleared.';
+    if (hasRevenueGoal && revenueDone && hasCloseGoal) return `Revenue hit. ${closesRemaining} close${closesRemaining === 1 ? '' : 's'} left.`;
+    if (hasCloseGoal && closesDone && hasRevenueGoal) return `Close count hit. ${formatCurrency(revenueRemaining)} left.`;
     if (dealsLogged === 0) return 'Ready for the first deal.';
-    return `${formatCurrency(revenueRemaining)} and ${closesRemaining} close${closesRemaining === 1 ? '' : 's'} left.`;
-  }, [closesDone, closesRemaining, dealsLogged, revenueDone, revenueRemaining]);
+    if (hasRevenueGoal && hasCloseGoal) return `${formatCurrency(revenueRemaining)} and ${closesRemaining} close${closesRemaining === 1 ? '' : 's'} left.`;
+    if (hasRevenueGoal) return `${formatCurrency(revenueRemaining)} left.`;
+    return `${closesRemaining} close${closesRemaining === 1 ? '' : 's'} left.`;
+  }, [closesDone, closesRemaining, dealsLogged, hasAnyGoal, hasCloseGoal, hasRevenueGoal, revenueDone, revenueRemaining]);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {

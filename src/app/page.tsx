@@ -1,16 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { usePayScale, useGoalPlans, useDailyEntries, useDailyCountdown, useAllDailyDeals, useHeadToHeadCompetition } from '@/hooks/useLocalStorage';
 import PayScaleEditor from '@/components/PayScaleEditor';
 import NewGoalForm from '@/components/NewGoalForm';
 import Dashboard from '@/components/Dashboard';
 import DailyCountdown from '@/components/DailyCountdown';
 import HeadToHead from '@/components/HeadToHead';
-import AuthPanel from '@/components/AuthPanel';
+import AuthPanel, { getDisplayName } from '@/components/AuthPanel';
 import { DEFAULT_PAY_SCALE, GoalPlan, DailyDeal } from '@/lib/types';
 import { getTodayISO } from '@/lib/calculations';
-import { supabase } from '@/lib/supabase';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStorage';
 import { User } from '@supabase/supabase-js';
 
@@ -45,6 +45,7 @@ export default function Home() {
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [user, setUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState('Local changes are saved on this device.');
+  const loadedCloudUserId = useRef<string | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -54,6 +55,31 @@ export default function Home() {
     }, 0);
     return () => window.clearTimeout(timer);
   }, []);
+
+  useEffect(() => {
+    if (!user || loadedCloudUserId.current === user.id) return;
+
+    const sessionKey = `goalTracker_cloudLoaded_${user.id}`;
+    if (window.sessionStorage.getItem(sessionKey) === 'true') {
+      loadedCloudUserId.current = user.id;
+      return;
+    }
+
+    loadedCloudUserId.current = user.id;
+    loadCloudState(user)
+      .then((cloudState) => {
+        if (!cloudState) {
+          setSyncStatus('Signed in. Set your goals, then changes will auto-save.');
+          return;
+        }
+        applyCloudState(cloudState);
+        window.sessionStorage.setItem(sessionKey, 'true');
+        window.location.reload();
+      })
+      .catch(() => {
+        setSyncStatus('Signed in, but cloud data could not load.');
+      });
+  }, [user]);
 
   useEffect(() => {
     const client = supabase;
@@ -85,6 +111,7 @@ export default function Home() {
   }
 
   const currentPayScale = payScale || DEFAULT_PAY_SCALE;
+  const displayName = user ? getDisplayName(user) : null;
 
   const handleCreatePlan = (plan: GoalPlan) => {
     savePlan(plan);
@@ -168,6 +195,43 @@ export default function Home() {
     }, 0);
   };
 
+  const signOut = async () => {
+    if (!supabase) return;
+    await supabase.auth.signOut();
+  };
+
+  if (isSupabaseConfigured && !user) {
+    return (
+      <div className={`app-shell min-h-screen ${theme === 'dark' ? 'theme-dark' : ''}`}>
+        <header className="app-header">
+          <div className="mx-auto flex min-h-16 max-w-5xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+            <div>
+              <p className="app-kicker text-xs font-semibold uppercase tracking-[0.18em]">
+                Commission Pace
+              </p>
+              <h1 className="app-title text-xl font-semibold">Goal Tracker</h1>
+            </div>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              className="theme-toggle rounded-full px-3 py-1 text-sm font-semibold transition-colors"
+            >
+              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            </button>
+          </div>
+        </header>
+        <main className="mx-auto grid min-h-[calc(100vh-96px)] max-w-2xl place-items-center px-4 py-10 sm:px-6">
+          <AuthPanel
+            user={user}
+            syncStatus={syncStatus}
+            onLoadCloud={syncCloudLoad}
+            onSaveCloud={syncCloudSave}
+          />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className={`app-shell min-h-screen ${theme === 'dark' ? 'theme-dark' : ''}`}>
       <header className="app-header sticky top-0 z-10">
@@ -184,13 +248,29 @@ export default function Home() {
                 {activePlan.goalType === 'commission' ? 'Commission' : 'Revenue'} Goal
               </span>
             )}
-            <button
-              type="button"
-              onClick={toggleTheme}
-              className="theme-toggle rounded-full px-3 py-1 text-sm font-semibold transition-colors"
-            >
-              {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
-            </button>
+            <div className="flex flex-wrap items-center justify-end gap-2">
+              {displayName && (
+                <span className="app-badge rounded-full px-3 py-1 text-sm font-medium">
+                  Welcome, {displayName}
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="theme-toggle rounded-full px-3 py-1 text-sm font-semibold transition-colors"
+              >
+                {theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+              </button>
+              {user && (
+                <button
+                  type="button"
+                  onClick={signOut}
+                  className="theme-toggle rounded-full px-3 py-1 text-sm font-semibold transition-colors"
+                >
+                  Sign Out
+                </button>
+              )}
+            </div>
           </div>
 
           <nav className="flex gap-2 overflow-x-auto pb-3">
@@ -223,15 +303,6 @@ export default function Home() {
       </header>
 
       <main className="mx-auto max-w-5xl px-4 py-6 pb-12 sm:px-6">
-        <div className="mb-6">
-          <AuthPanel
-            user={user}
-            syncStatus={syncStatus}
-            onLoadCloud={syncCloudLoad}
-            onSaveCloud={syncCloudSave}
-          />
-        </div>
-
         {activeTab === 'today' && (
           <div className="space-y-6">
             <DailyCountdown

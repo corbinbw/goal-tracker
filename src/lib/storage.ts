@@ -155,8 +155,8 @@ export function getDailyGoal(date: string): DailyGoal {
 
   return existing || {
     date,
-    revenueGoal: 15000,
-    closeGoal: 5
+    revenueGoal: 0,
+    closeGoal: 0
   };
 }
 

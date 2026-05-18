@@ -14,6 +14,7 @@ interface Props {
 export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
   const [message, setMessage] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -26,7 +27,15 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
 
     const authCall = mode === 'signin'
       ? supabase.auth.signInWithPassword({ email, password })
-      : supabase.auth.signUp({ email, password });
+      : supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: {
+              full_name: name.trim()
+            }
+          }
+        });
 
     const { error } = await authCall;
     if (error) {
@@ -34,6 +43,7 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
     } else {
       setMessage(mode === 'signin' ? 'Signed in.' : 'Account created. Check your email if confirmation is turned on.');
       setPassword('');
+      setName('');
     }
 
     setSubmitting(false);
@@ -56,11 +66,13 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
   }
 
   if (user) {
+    const displayName = getDisplayName(user);
+
     return (
       <section className="auth-panel flex flex-col gap-3 rounded-lg border border-stone-200 bg-white p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Cloud Sync</p>
-          <h2 className="mt-1 font-semibold text-slate-950">{user.email}</h2>
+          <h2 className="mt-1 font-semibold text-slate-950">Welcome, {displayName}</h2>
           <p className="mt-1 text-sm text-slate-500">{syncStatus}</p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -97,7 +109,16 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
         <h2 className="mt-1 font-semibold text-slate-950">Sign in to sync across devices</h2>
         <p className="mt-1 text-sm text-slate-500">Use the same login on your phone and computer.</p>
       </div>
-      <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto]">
+      <div className={`grid gap-3 ${mode === 'signup' ? 'sm:grid-cols-[1fr_1fr]' : 'sm:grid-cols-[1fr_1fr_auto]'}`}>
+        {mode === 'signup' && (
+          <input
+            type="text"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Name"
+            className="rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+          />
+        )}
         <input
           type="email"
           value={email}
@@ -116,7 +137,7 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
           type="button"
           onClick={handleSubmit}
           disabled={submitting}
-          className="rounded-md bg-blue-700 px-5 py-2 font-semibold text-white transition-colors hover:bg-blue-800 disabled:opacity-60"
+          className={`${mode === 'signup' ? 'sm:col-span-2' : ''} rounded-md bg-blue-700 px-5 py-2 font-semibold text-white transition-colors hover:bg-blue-800 disabled:opacity-60`}
         >
           {mode === 'signin' ? 'Sign In' : 'Sign Up'}
         </button>
@@ -133,4 +154,10 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
       </div>
     </section>
   );
+}
+
+export function getDisplayName(user: User): string {
+  const fullName = user.user_metadata?.full_name;
+  if (typeof fullName === 'string' && fullName.trim()) return fullName.trim();
+  return user.email?.split('@')[0] || 'there';
 }
