@@ -69,7 +69,9 @@ export default function Home() {
     loadCloudState(user)
       .then((cloudState) => {
         if (!cloudState) {
-          setSyncStatus('Signed in. Set your goals, then changes will auto-save.');
+          saveCloudState(user)
+            .then(() => setSyncStatus('Migrated this browser\'s saved data to your account.'))
+            .catch(() => setSyncStatus('Signed in, but migration to cloud failed.'));
           return;
         }
         applyCloudState(cloudState);
@@ -384,13 +386,23 @@ export default function Home() {
         )}
 
         {activeTab === 'settings' && (
-          <PayScaleEditor
-            payScale={currentPayScale}
-            onSave={(nextPayScale) => {
-              setPayScale(nextPayScale);
-              queueCloudSave();
-            }}
-          />
+          <div className="space-y-6">
+            {user && (
+              <AuthPanel
+                user={user}
+                syncStatus={syncStatus}
+                onLoadCloud={syncCloudLoad}
+                onSaveCloud={syncCloudSave}
+              />
+            )}
+            <PayScaleEditor
+              payScale={currentPayScale}
+              onSave={(nextPayScale) => {
+                setPayScale(nextPayScale);
+                queueCloudSave();
+              }}
+            />
+          </div>
         )}
       </main>
 
