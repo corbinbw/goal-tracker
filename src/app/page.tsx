@@ -405,6 +405,10 @@ export default function Home() {
             plan={activePlan}
             entries={entries}
             payScale={currentPayScale}
+            onSavePlan={(plan) => {
+              savePlan(plan);
+              queueCloudSave();
+            }}
             onSaveEntry={(entry) => {
               saveEntry(entry);
               queueCloudSave();

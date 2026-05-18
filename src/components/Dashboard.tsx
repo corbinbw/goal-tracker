@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { PayScale, GoalPlan, DailyEntry } from '@/lib/types';
 import {
+  calculateRevenueForCommissionGoal,
   calculateDashboardStats,
   calculateTierProjections,
   formatCurrency,
@@ -16,6 +17,7 @@ interface Props {
   plan: GoalPlan;
   entries: DailyEntry[];
   payScale: PayScale;
+  onSavePlan: (plan: GoalPlan) => void;
   onSaveEntry: (entry: DailyEntry) => void;
   onDeleteEntry: (entryId: string) => void;
   onEndPlan: () => void;
@@ -25,6 +27,7 @@ export default function Dashboard({
   plan,
   entries,
   payScale,
+  onSavePlan,
   onSaveEntry,
   onDeleteEntry,
   onEndPlan
@@ -36,6 +39,12 @@ export default function Dashboard({
   const [entryDate, setEntryDate] = useState<string>(getTodayISO());
   const [editingEntry, setEditingEntry] = useState<string | null>(null);
   const [editValue, setEditValue] = useState<string>('');
+  const [editingPlan, setEditingPlan] = useState(false);
+  const [goalType, setGoalType] = useState<'commission' | 'revenue'>(plan.goalType);
+  const [goalAmount, setGoalAmount] = useState(plan.goalAmount.toString());
+  const [startDate, setStartDate] = useState(plan.startDate || '');
+  const [endDate, setEndDate] = useState(plan.endDate || '');
+  const [workdays, setWorkdays] = useState(plan.workdaysTotal.toString());
 
   const stats = calculateDashboardStats(plan, entries, payScale);
   const projections = calculateTierProjections(stats.revenueSoFar, payScale.tiers);
@@ -80,6 +89,36 @@ export default function Dashboard({
     setEditValue('');
   };
 
+  const startPlanEdit = () => {
+    setGoalType(plan.goalType);
+    setGoalAmount(plan.goalAmount.toString());
+    setStartDate(plan.startDate || '');
+    setEndDate(plan.endDate || '');
+    setWorkdays(plan.workdaysTotal.toString());
+    setEditingPlan(true);
+  };
+
+  const handleSavePlan = () => {
+    const amount = parseFloat(goalAmount);
+    const days = parseInt(workdays);
+    if (!Number.isFinite(amount) || amount <= 0 || !Number.isFinite(days) || days <= 0) return;
+
+    const revenueTarget = goalType === 'revenue'
+      ? amount
+      : calculateRevenueForCommissionGoal(amount, payScale.tiers).revenue;
+
+    onSavePlan({
+      ...plan,
+      goalType,
+      goalAmount: amount,
+      revenueTarget,
+      workdaysTotal: days,
+      startDate: startDate || null,
+      endDate: endDate || null
+    });
+    setEditingPlan(false);
+  };
+
   const goalMissed = stats.workdaysRemaining === 0 && stats.revenueRemaining > 0;
   const goalReached = stats.revenueRemaining === 0;
 
@@ -104,10 +143,100 @@ export default function Dashboard({
 
       {(plan.startDate || plan.endDate) && (
         <section className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
-          <p className="text-sm font-medium text-slate-500">Pay Period</p>
-          <h2 className="mt-1 text-2xl font-semibold text-slate-950">
-            {plan.startDate ? formatDate(plan.startDate) : 'Start'} - {plan.endDate ? formatDate(plan.endDate) : 'Open'}
-          </h2>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+            <div>
+              <p className="text-sm font-medium text-slate-500">Pay Period</p>
+              <h2 className="mt-1 text-2xl font-semibold text-slate-950">
+                {plan.startDate ? formatDate(plan.startDate) : 'Start'} - {plan.endDate ? formatDate(plan.endDate) : 'Open'}
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                {plan.goalType === 'commission' ? `${formatCurrency(plan.goalAmount)} commission goal` : `${formatCurrency(plan.goalAmount)} revenue goal`}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={startPlanEdit}
+              className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-100"
+            >
+              Edit Goal
+            </button>
+          </div>
+          {editingPlan && (
+            <div className="mt-5 rounded-lg border border-stone-200 bg-stone-50 p-4">
+              <div className="grid gap-4 lg:grid-cols-[1fr_1fr_1fr]">
+                <div>
+                  <label className="mb-2 block text-sm font-semibold text-slate-700">Goal Type</label>
+                  <select
+                    value={goalType}
+                    onChange={(event) => setGoalType(event.target.value as 'commission' | 'revenue')}
+                    className="w-full rounded-md border border-stone-300 bg-white px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  >
+                    <option value="revenue">Revenue Goal</option>
+                    <option value="commission">Commission Goal</option>
+                  </select>
+                </div>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">
+                    {goalType === 'commission' ? 'Commission Goal' : 'Revenue Goal'}
+                  </span>
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={goalAmount}
+                    onChange={(event) => setGoalAmount(event.target.value)}
+                    className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">Counted Days</span>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={workdays}
+                    onChange={(event) => setWorkdays(event.target.value)}
+                    className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">Start Date</span>
+                  <input
+                    type="date"
+                    value={startDate}
+                    onChange={(event) => setStartDate(event.target.value)}
+                    className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <label className="block">
+                  <span className="mb-2 block text-sm font-semibold text-slate-700">End Date</span>
+                  <input
+                    type="date"
+                    value={endDate}
+                    min={startDate || undefined}
+                    onChange={(event) => setEndDate(event.target.value)}
+                    className="w-full rounded-md border border-stone-300 px-3 py-2 outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </label>
+                <div className="flex items-end gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSavePlan}
+                    className="rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                  >
+                    Save Goal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setEditingPlan(false)}
+                    className="rounded-md border border-stone-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-100"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </section>
       )}
 
