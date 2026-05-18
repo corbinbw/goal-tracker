@@ -9,9 +9,11 @@ interface Props {
   syncStatus: string;
   onLoadCloud: () => void;
   onSaveCloud: () => void;
+  onCreateBackup?: () => void;
+  onRestoreBackup?: () => void;
 }
 
-export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }: Props) {
+export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud, onCreateBackup, onRestoreBackup }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -90,6 +92,24 @@ export default function AuthPanel({ user, syncStatus, onLoadCloud, onSaveCloud }
           >
             Save Cloud
           </button>
+          {onCreateBackup && (
+            <button
+              type="button"
+              onClick={onCreateBackup}
+              className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-100"
+            >
+              Backup Local
+            </button>
+          )}
+          {onRestoreBackup && (
+            <button
+              type="button"
+              onClick={onRestoreBackup}
+              className="rounded-md border border-stone-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 hover:bg-stone-100"
+            >
+              Restore Backup
+            </button>
+          )}
           <button
             type="button"
             onClick={signOut}

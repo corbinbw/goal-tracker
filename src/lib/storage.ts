@@ -7,6 +7,7 @@ const STORAGE_KEYS = {
   DAILY_GOALS: 'goalTracker_dailyGoals',
   DAILY_DEALS: 'goalTracker_dailyDeals',
   HEAD_TO_HEAD: 'goalTracker_headToHead',
+  BACKUPS: 'goalTracker_backups',
 };
 
 export interface AppDataSnapshot {
@@ -16,6 +17,13 @@ export interface AppDataSnapshot {
   dailyGoals: DailyGoal[];
   dailyDeals: DailyDeal[];
   headToHead: HeadToHeadCompetition[];
+}
+
+export interface AppDataBackup {
+  id: string;
+  createdAt: string;
+  reason: string;
+  data: AppDataSnapshot;
 }
 
 // Pay Scale
@@ -315,4 +323,47 @@ export function importAppData(data: Partial<AppDataSnapshot>): void {
   if (Array.isArray(data.dailyGoals)) saveDailyGoals(data.dailyGoals);
   if (Array.isArray(data.dailyDeals)) saveDailyDeals(data.dailyDeals);
   if (Array.isArray(data.headToHead)) saveHeadToHeadCompetitions(data.headToHead);
+}
+
+export function hasMeaningfulAppData(data: Partial<AppDataSnapshot> = exportAppData()): boolean {
+  const hasPlans = Array.isArray(data.goalPlans) && data.goalPlans.length > 0;
+  const hasEntries = Array.isArray(data.dailyEntries) && data.dailyEntries.length > 0;
+  const hasDeals = Array.isArray(data.dailyDeals) && data.dailyDeals.length > 0;
+  const hasCompetitions = Array.isArray(data.headToHead) && data.headToHead.length > 0;
+  const hasGoals = Array.isArray(data.dailyGoals) && data.dailyGoals.some(goal => goal.revenueGoal > 0 || goal.closeGoal > 0);
+
+  return hasPlans || hasEntries || hasDeals || hasCompetitions || hasGoals;
+}
+
+export function getLocalBackups(): AppDataBackup[] {
+  if (typeof window === 'undefined') return [];
+
+  const stored = localStorage.getItem(STORAGE_KEYS.BACKUPS);
+  if (!stored) return [];
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function createLocalBackup(reason: string): AppDataBackup {
+  const backup: AppDataBackup = {
+    id: `${Date.now()}`,
+    createdAt: new Date().toISOString(),
+    reason,
+    data: exportAppData()
+  };
+  const backups = [backup, ...getLocalBackups()].slice(0, 10);
+  localStorage.setItem(STORAGE_KEYS.BACKUPS, JSON.stringify(backups));
+  return backup;
+}
+
+export function restoreLatestLocalBackup(): AppDataBackup | null {
+  const latest = getLocalBackups()[0] || null;
+  if (!latest) return null;
+
+  importAppData(latest.data);
+  return latest;
 }

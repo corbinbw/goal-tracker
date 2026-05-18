@@ -13,6 +13,7 @@ import { getTodayISO } from '@/lib/calculations';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStorage';
 import { User } from '@supabase/supabase-js';
+import { createLocalBackup, hasMeaningfulAppData, restoreLatestLocalBackup } from '@/lib/storage';
 
 type Tab = 'today' | 'tracker' | 'new-goal' | 'settings';
 
@@ -68,12 +69,27 @@ export default function Home() {
     loadedCloudUserId.current = user.id;
     loadCloudState(user)
       .then((cloudState) => {
+        const localHasData = hasMeaningfulAppData();
+
         if (!cloudState) {
-          saveCloudState(user)
-            .then(() => setSyncStatus('Migrated this browser\'s saved data to your account.'))
-            .catch(() => setSyncStatus('Signed in, but migration to cloud failed.'));
+          if (localHasData) {
+            saveCloudState(user)
+              .then(() => setSyncStatus('Migrated this browser\'s saved data to your account.'))
+              .catch(() => setSyncStatus('Signed in, but migration to cloud failed.'));
+          } else {
+            setSyncStatus('Signed in. Set your goals, then changes will auto-save.');
+          }
           return;
         }
+
+        if (!hasMeaningfulAppData(cloudState) && localHasData) {
+          saveCloudState(user)
+            .then(() => setSyncStatus('Protected local data and replaced empty cloud save.'))
+            .catch(() => setSyncStatus('Cloud looked empty, so local data was kept.'));
+          return;
+        }
+
+        createLocalBackup('Before automatic cloud load');
         applyCloudState(cloudState);
         window.sessionStorage.setItem(sessionKey, 'true');
         window.location.reload();
@@ -181,6 +197,11 @@ export default function Home() {
         setSyncStatus('No cloud save found yet. Save Cloud will create one.');
         return;
       }
+      if (!hasMeaningfulAppData(cloudState) && hasMeaningfulAppData()) {
+        setSyncStatus('Cloud save is empty, so local data was kept.');
+        return;
+      }
+      createLocalBackup('Before manual cloud load');
       applyCloudState(cloudState);
       window.location.reload();
     } catch (error) {
@@ -200,6 +221,21 @@ export default function Home() {
   const signOut = async () => {
     if (!supabase) return;
     await supabase.auth.signOut();
+  };
+
+  const createBackup = () => {
+    createLocalBackup('Manual backup');
+    setSyncStatus('Local backup created.');
+  };
+
+  const restoreBackup = () => {
+    const backup = restoreLatestLocalBackup();
+    if (!backup) {
+      setSyncStatus('No local backup found in this browser.');
+      return;
+    }
+    setSyncStatus(`Restored backup from ${new Date(backup.createdAt).toLocaleString()}.`);
+    window.setTimeout(() => window.location.reload(), 250);
   };
 
   if (isSupabaseConfigured && !user) {
@@ -228,6 +264,8 @@ export default function Home() {
             syncStatus={syncStatus}
             onLoadCloud={syncCloudLoad}
             onSaveCloud={syncCloudSave}
+            onCreateBackup={createBackup}
+            onRestoreBackup={restoreBackup}
           />
         </main>
       </div>
@@ -393,6 +431,8 @@ export default function Home() {
                 syncStatus={syncStatus}
                 onLoadCloud={syncCloudLoad}
                 onSaveCloud={syncCloudSave}
+                onCreateBackup={createBackup}
+                onRestoreBackup={restoreBackup}
               />
             )}
             <PayScaleEditor
