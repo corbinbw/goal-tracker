@@ -8,7 +8,7 @@ import Dashboard from '@/components/Dashboard';
 import DailyCountdown from '@/components/DailyCountdown';
 import HeadToHead from '@/components/HeadToHead';
 import AuthPanel, { getDisplayName } from '@/components/AuthPanel';
-import { DEFAULT_PAY_SCALE, GoalPlan, DailyDeal } from '@/lib/types';
+import { DEFAULT_PAY_SCALE, GoalPlan, DailyDeal, DailyEntry } from '@/lib/types';
 import { getTodayISO } from '@/lib/calculations';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStorage';
@@ -238,6 +238,28 @@ export default function Home() {
     window.setTimeout(() => window.location.reload(), 250);
   };
 
+  const restoreKnownMayPayPeriod = async () => {
+    if (!user || user.email?.toLowerCase() !== 'corbinbrandonwilliams@gmail.com') return;
+
+    createLocalBackup('Before restoring May 10-23 data');
+    const recoveredPlan = getRecoveredMayPayPeriodPlan();
+    const recoveredEntries = getRecoveredMayPayPeriodEntries(recoveredPlan.id);
+
+    savePlan(recoveredPlan);
+    recoveredEntries.forEach(entry => saveEntry(entry));
+    refreshEntries();
+    setActiveTab('tracker');
+
+    try {
+      await saveCloudState(user);
+      setSyncStatus('Recovered May 10-23 data and saved it to cloud.');
+    } catch {
+      setSyncStatus('Recovered May 10-23 data locally. Use Save Cloud to retry cloud sync.');
+    }
+
+    window.setTimeout(() => window.location.reload(), 250);
+  };
+
   if (isSupabaseConfigured && !user) {
     return (
       <div className={`app-shell min-h-screen ${theme === 'dark' ? 'theme-dark' : ''}`}>
@@ -435,6 +457,24 @@ export default function Home() {
                 onRestoreBackup={restoreBackup}
               />
             )}
+            {user?.email?.toLowerCase() === 'corbinbrandonwilliams@gmail.com' && (
+              <section className="auth-panel rounded-lg border border-stone-200 bg-white p-4 shadow-sm">
+                <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">
+                  Data Recovery
+                </p>
+                <h2 className="mt-1 font-semibold text-slate-950">Restore May 10-23 Pay Period</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  Recreates the deals you listed, then saves them to your cloud account.
+                </p>
+                <button
+                  type="button"
+                  onClick={restoreKnownMayPayPeriod}
+                  className="mt-4 rounded-md bg-blue-700 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-800"
+                >
+                  Restore May Data
+                </button>
+              </section>
+            )}
             <PayScaleEditor
               payScale={currentPayScale}
               onSave={(nextPayScale) => {
@@ -475,4 +515,93 @@ function TabButton({
       {children}
     </button>
   );
+}
+
+function getRecoveredMayPayPeriodPlan(): GoalPlan {
+  return {
+    id: 'recovered-pay-period-2026-05-10-2026-05-23',
+    createdAt: '2026-05-18T00:00:00.000Z',
+    goalType: 'revenue',
+    goalAmount: 50000,
+    revenueTarget: 50000,
+    workdaysTotal: 12,
+    startDate: '2026-05-10',
+    endDate: '2026-05-23',
+    isActive: true
+  };
+}
+
+function getRecoveredMayPayPeriodEntries(goalPlanId: string): DailyEntry[] {
+  return [
+    {
+      id: 'recovered-2026-05-11-andrew-buckley',
+      goalPlanId,
+      date: '2026-05-11',
+      revenue: 2507.88,
+      notes: 'Recovered from notes',
+      driverName: 'Andrew Buckley',
+      dealTag: 'https://dd.leaseend.com/deals/726769',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-12-alejandro-gomez',
+      goalPlanId,
+      date: '2026-05-12',
+      revenue: 3742.87,
+      notes: 'Recovered from notes',
+      driverName: 'Alejandro Gomez',
+      dealTag: 'https://dd.leaseend.com/deals/736030',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-13-john-mcgill',
+      goalPlanId,
+      date: '2026-05-13',
+      revenue: 5132.25,
+      notes: 'Recovered from notes',
+      driverName: 'JOHN MCGILL',
+      dealTag: 'https://dd.leaseend.com/deals/737220',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-13-josette-brand',
+      goalPlanId,
+      date: '2026-05-13',
+      revenue: 4048.78,
+      notes: 'Recovered from notes',
+      driverName: 'Josette Brand',
+      dealTag: 'https://dd.leaseend.com/deals/716797',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-14-brianna-wilkins',
+      goalPlanId,
+      date: '2026-05-14',
+      revenue: 201,
+      notes: 'Recovered from notes',
+      driverName: 'BRIANNA WILKINS',
+      dealTag: 'https://dd.leaseend.com/deals/737686',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-14-jeremy-laubon',
+      goalPlanId,
+      date: '2026-05-14',
+      revenue: 2353.91,
+      notes: 'Recovered from notes',
+      driverName: 'Jeremy Laubon',
+      dealTag: 'https://dd.leaseend.com/deals/737173',
+      funded: true
+    },
+    {
+      id: 'recovered-2026-05-15-martin-melish',
+      goalPlanId,
+      date: '2026-05-15',
+      revenue: 1980.13,
+      notes: 'Recovered from notes',
+      driverName: 'MARTIN MELISH',
+      dealTag: 'https://dd.leaseend.com/deals/735845',
+      funded: false
+    }
+  ];
 }
