@@ -7,6 +7,7 @@ import NewGoalForm from '@/components/NewGoalForm';
 import Dashboard from '@/components/Dashboard';
 import DailyCountdown from '@/components/DailyCountdown';
 import HeadToHead from '@/components/HeadToHead';
+import TeamDashboard from '@/components/TeamDashboard';
 import AuthPanel, { getDisplayName } from '@/components/AuthPanel';
 import { DEFAULT_PAY_SCALE, GoalPlan, DailyDeal, DailyEntry } from '@/lib/types';
 import { getTodayISO } from '@/lib/calculations';
@@ -15,7 +16,7 @@ import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStor
 import { User } from '@supabase/supabase-js';
 import { createLocalBackup, hasMeaningfulAppData, restoreLatestLocalBackup } from '@/lib/storage';
 
-type Tab = 'today' | 'tracker' | 'new-goal' | 'settings';
+type Tab = 'today' | 'tracker' | 'team' | 'new-goal' | 'settings';
 
 export default function Home() {
   const { payScale, setPayScale, loading: payScaleLoading } = usePayScale();
@@ -349,6 +350,12 @@ export default function Home() {
               Pay Period
             </TabButton>
             <TabButton
+              active={activeTab === 'team'}
+              onClick={() => setActiveTab('team')}
+            >
+              Team
+            </TabButton>
+            <TabButton
               active={activeTab === 'new-goal'}
               onClick={() => setActiveTab('new-goal')}
             >
@@ -440,6 +447,10 @@ export default function Home() {
               Create Pay-Period Goal
             </button>
           </div>
+        )}
+
+        {activeTab === 'team' && (
+          <TeamDashboard />
         )}
 
         {activeTab === 'new-goal' && (
