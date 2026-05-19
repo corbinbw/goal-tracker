@@ -48,6 +48,7 @@ export default function Home() {
   const [user, setUser] = useState<User | null>(null);
   const [syncStatus, setSyncStatus] = useState('Local changes are saved on this device.');
   const loadedCloudUserId = useRef<string | null>(null);
+  const autosaveTimer = useRef<number | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -118,6 +119,25 @@ export default function Home() {
 
     return () => listener.subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    return () => {
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const saveWhenHidden = () => {
+      if (document.visibilityState !== 'hidden') return;
+      if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+      saveCloudState(user).catch(() => undefined);
+    };
+
+    document.addEventListener('visibilitychange', saveWhenHidden);
+    return () => document.removeEventListener('visibilitychange', saveWhenHidden);
+  }, [user]);
 
   if (!mounted || payScaleLoading || plansLoading || dailyLoading || allDealsLoading || competitionLoading || !dailyGoal) {
     return (
@@ -212,11 +232,16 @@ export default function Home() {
 
   const queueCloudSave = () => {
     if (!user) return;
-    window.setTimeout(() => {
+    if (autosaveTimer.current) clearTimeout(autosaveTimer.current);
+    setSyncStatus('Saving changes...');
+
+    autosaveTimer.current = window.setTimeout(() => {
       saveCloudState(user)
-        .then(() => setSyncStatus('Auto-saved to cloud.'))
+        .then(() => {
+          setSyncStatus(`Auto-saved at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}.`);
+        })
         .catch(() => setSyncStatus('Cloud auto-save failed. Use Save Cloud to retry.'));
-    }, 0);
+    }, 800);
   };
 
   const signOut = async () => {

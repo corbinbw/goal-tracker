@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { TeamMemberState, loadTeamStates } from '@/lib/cloudStorage';
 import { formatCurrency, getTodayISO } from '@/lib/calculations';
 
@@ -39,7 +39,7 @@ export default function TeamDashboard() {
   const teamSignedRevenue = rows.reduce((sum, row) => sum + row.signedRevenue, 0);
   const teamFundedRevenue = rows.reduce((sum, row) => sum + row.fundedRevenue, 0);
 
-  const refresh = async () => {
+  const refresh = useCallback(async () => {
     setLoading(true);
     setMessage('Loading team data...');
     try {
@@ -50,7 +50,16 @@ export default function TeamDashboard() {
       setMessage(error instanceof Error ? error.message : 'Could not load team data.');
     }
     setLoading(false);
-  };
+  }, []);
+
+  useEffect(() => {
+    const initialLoad = window.setTimeout(refresh, 0);
+    const interval = window.setInterval(refresh, 30000);
+    return () => {
+      window.clearTimeout(initialLoad);
+      window.clearInterval(interval);
+    };
+  }, [refresh]);
 
   return (
     <div className="space-y-6">
@@ -59,7 +68,7 @@ export default function TeamDashboard() {
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Team View</p>
             <h2 className="mt-1 text-2xl font-semibold text-slate-950">Daily Goals Together</h2>
-            <p className="mt-1 text-sm text-slate-500">{message}</p>
+            <p className="mt-1 text-sm text-slate-500">{message} Auto-refreshes every 30 seconds.</p>
           </div>
           <button
             type="button"
