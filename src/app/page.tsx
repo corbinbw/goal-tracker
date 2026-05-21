@@ -88,13 +88,7 @@ export default function Home() {
         }
 
         if (!cloudState) {
-          if (!switchingUsers && localHasData && !previousLocalUserId) {
-            saveCloudState(user)
-              .then(() => setSyncStatus('Migrated this browser\'s saved data to your account.'))
-              .catch(() => setSyncStatus('Signed in, but migration to cloud failed.'));
-          } else {
-            setSyncStatus('Signed in. Set your goals, then changes will auto-save.');
-          }
+          setSyncStatus('No cloud save found for this account yet. Set goals or use Save Cloud when ready.');
           setCurrentLocalUserId(user.id);
           if (switchingUsers) {
             window.sessionStorage.setItem(sessionKey, 'true');
@@ -104,9 +98,7 @@ export default function Home() {
         }
 
         if (!switchingUsers && !hasMeaningfulAppData(cloudState) && localHasData) {
-          saveCloudState(user)
-            .then(() => setSyncStatus('Protected local data and replaced empty cloud save.'))
-            .catch(() => setSyncStatus('Cloud looked empty, so local data was kept.'));
+          setSyncStatus('Cloud save is empty. Local data was kept until you choose Save Cloud.');
           setCurrentLocalUserId(user.id);
           return;
         }
