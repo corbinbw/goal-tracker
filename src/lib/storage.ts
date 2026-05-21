@@ -8,6 +8,7 @@ const STORAGE_KEYS = {
   DAILY_DEALS: 'goalTracker_dailyDeals',
   HEAD_TO_HEAD: 'goalTracker_headToHead',
   BACKUPS: 'goalTracker_backups',
+  CURRENT_USER: 'goalTracker_currentUserId',
 };
 
 export interface AppDataSnapshot {
@@ -323,6 +324,24 @@ export function importAppData(data: Partial<AppDataSnapshot>): void {
   if (Array.isArray(data.dailyGoals)) saveDailyGoals(data.dailyGoals);
   if (Array.isArray(data.dailyDeals)) saveDailyDeals(data.dailyDeals);
   if (Array.isArray(data.headToHead)) saveHeadToHeadCompetitions(data.headToHead);
+}
+
+export function clearAppData(): void {
+  localStorage.removeItem(STORAGE_KEYS.PAY_SCALE);
+  localStorage.removeItem(STORAGE_KEYS.GOAL_PLANS);
+  localStorage.removeItem(STORAGE_KEYS.DAILY_ENTRIES);
+  localStorage.removeItem(STORAGE_KEYS.DAILY_GOALS);
+  localStorage.removeItem(STORAGE_KEYS.DAILY_DEALS);
+  localStorage.removeItem(STORAGE_KEYS.HEAD_TO_HEAD);
+}
+
+export function getCurrentLocalUserId(): string | null {
+  if (typeof window === 'undefined') return null;
+  return localStorage.getItem(STORAGE_KEYS.CURRENT_USER);
+}
+
+export function setCurrentLocalUserId(userId: string): void {
+  localStorage.setItem(STORAGE_KEYS.CURRENT_USER, userId);
 }
 
 export function hasMeaningfulAppData(data: Partial<AppDataSnapshot> = exportAppData()): boolean {

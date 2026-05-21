@@ -37,7 +37,12 @@ export default function TeamDashboard() {
         deals: member.data.dailyDeals.length,
         entries: member.data.dailyEntries.length,
         plans: member.data.goalPlans.length
-      }
+      },
+      syncState: !member.hasProfile
+        ? 'Needs login'
+        : !member.hasCloudState
+          ? 'Needs save'
+          : 'Synced'
     };
   }), [members, selectedDate]);
 
@@ -52,7 +57,7 @@ export default function TeamDashboard() {
     try {
       const teamStates = await loadTeamStates();
       setMembers(teamStates);
-      setMessage(teamStates.length === 0 ? 'No team data found yet.' : `Loaded ${teamStates.length} team member${teamStates.length === 1 ? '' : 's'}.`);
+      setMessage(teamStates.length === 0 ? 'No team members found. Check team_members in Supabase.' : `Loaded ${teamStates.length} team member${teamStates.length === 1 ? '' : 's'}.`);
     } catch (error) {
       setMessage(error instanceof Error ? error.message : 'Could not load team data.');
     }
@@ -124,6 +129,7 @@ export default function TeamDashboard() {
                   <th className="px-4 py-3">Period Funded</th>
                   <th className="px-4 py-3">Period Signed</th>
                   <th className="px-4 py-3">Synced Data</th>
+                  <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Updated</th>
                 </tr>
               </thead>
@@ -146,7 +152,8 @@ export default function TeamDashboard() {
                     <td className="px-4 py-3 text-xs text-slate-500">
                       {row.dataCounts.goals} goals / {row.dataCounts.deals} deals / {row.dataCounts.entries} entries
                     </td>
-                    <td className="px-4 py-3 text-slate-500">{formatUpdated(row.updatedAt)}</td>
+                    <td className="px-4 py-3 text-slate-500">{row.syncState}</td>
+                    <td className="px-4 py-3 text-slate-500">{row.updatedAt ? formatUpdated(row.updatedAt) : '-'}</td>
                   </tr>
                 ))}
               </tbody>

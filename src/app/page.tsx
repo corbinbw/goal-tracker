@@ -14,7 +14,14 @@ import { getTodayISO } from '@/lib/calculations';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { applyCloudState, loadCloudState, saveCloudState } from '@/lib/cloudStorage';
 import { User } from '@supabase/supabase-js';
-import { createLocalBackup, hasMeaningfulAppData, restoreLatestLocalBackup } from '@/lib/storage';
+import {
+  clearAppData,
+  createLocalBackup,
+  getCurrentLocalUserId,
+  hasMeaningfulAppData,
+  restoreLatestLocalBackup,
+  setCurrentLocalUserId
+} from '@/lib/storage';
 
 type Tab = 'today' | 'tracker' | 'team' | 'new-goal' | 'settings';
 
@@ -63,7 +70,7 @@ export default function Home() {
     if (!user || loadedCloudUserId.current === user.id) return;
 
     const sessionKey = `goalTracker_cloudLoaded_${user.id}`;
-    if (window.sessionStorage.getItem(sessionKey) === 'true') {
+    if (window.sessionStorage.getItem(sessionKey) === 'true' && getCurrentLocalUserId() === user.id) {
       loadedCloudUserId.current = user.id;
       return;
     }
@@ -71,28 +78,44 @@ export default function Home() {
     loadedCloudUserId.current = user.id;
     loadCloudState(user)
       .then((cloudState) => {
+        const previousLocalUserId = getCurrentLocalUserId();
+        const switchingUsers = Boolean(previousLocalUserId && previousLocalUserId !== user.id);
         const localHasData = hasMeaningfulAppData();
 
+        if (switchingUsers && localHasData) {
+          createLocalBackup(`Before switching from ${previousLocalUserId} to ${user.id}`);
+          clearAppData();
+        }
+
         if (!cloudState) {
-          if (localHasData) {
+          if (!switchingUsers && localHasData && !previousLocalUserId) {
             saveCloudState(user)
               .then(() => setSyncStatus('Migrated this browser\'s saved data to your account.'))
               .catch(() => setSyncStatus('Signed in, but migration to cloud failed.'));
           } else {
             setSyncStatus('Signed in. Set your goals, then changes will auto-save.');
           }
+          setCurrentLocalUserId(user.id);
+          if (switchingUsers) {
+            window.sessionStorage.setItem(sessionKey, 'true');
+            window.location.reload();
+          }
           return;
         }
 
-        if (!hasMeaningfulAppData(cloudState) && localHasData) {
+        if (!switchingUsers && !hasMeaningfulAppData(cloudState) && localHasData) {
           saveCloudState(user)
             .then(() => setSyncStatus('Protected local data and replaced empty cloud save.'))
             .catch(() => setSyncStatus('Cloud looked empty, so local data was kept.'));
+          setCurrentLocalUserId(user.id);
           return;
         }
 
-        createLocalBackup('Before automatic cloud load');
+        if (!switchingUsers) {
+          createLocalBackup('Before automatic cloud load');
+        }
         applyCloudState(cloudState);
+        setCurrentLocalUserId(user.id);
         window.sessionStorage.setItem(sessionKey, 'true');
         window.location.reload();
       })

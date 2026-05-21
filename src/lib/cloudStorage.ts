@@ -23,12 +23,20 @@ interface TeamStateRow {
   updated_at: string;
 }
 
+interface TeamMemberRow {
+  email: string;
+  role: 'manager' | 'member';
+  created_at: string;
+}
+
 export interface TeamMemberState {
   userId: string;
   email: string;
   name: string;
   data: AppDataSnapshot;
   updatedAt: string;
+  hasCloudState: boolean;
+  hasProfile: boolean;
 }
 
 function getUserName(user: User): string {
@@ -88,7 +96,7 @@ export function applyCloudState(data: AppDataSnapshot): void {
 export async function loadTeamStates(): Promise<TeamMemberState[]> {
   if (!supabase) return [];
 
-  const [statesResult, profilesResult] = await Promise.all([
+  const [statesResult, profilesResult, teamMembersResult] = await Promise.all([
     supabase
       .from('app_state')
       .select('user_id,data,updated_at')
@@ -97,22 +105,50 @@ export async function loadTeamStates(): Promise<TeamMemberState[]> {
     supabase
       .from('profiles')
       .select('user_id,email,full_name,updated_at')
-      .returns<ProfileRow[]>()
+      .returns<ProfileRow[]>(),
+    supabase
+      .from('team_members')
+      .select('email,role,created_at')
+      .returns<TeamMemberRow[]>()
   ]);
 
   if (statesResult.error) throw statesResult.error;
   if (profilesResult.error) throw profilesResult.error;
+  if (teamMembersResult.error) throw teamMembersResult.error;
 
-  const profilesById = new Map(profilesResult.data.map(profile => [profile.user_id, profile]));
+  const profilesByEmail = new Map(profilesResult.data.map(profile => [profile.email.toLowerCase(), profile]));
+  const statesByUserId = new Map(statesResult.data.map(state => [state.user_id, state]));
+  const members = teamMembersResult.data
+    .filter(member => member.role === 'member')
+    .sort((a, b) => a.email.localeCompare(b.email));
 
-  return statesResult.data.map(row => {
-    const profile = profilesById.get(row.user_id);
+  return members.map(member => {
+    const profile = profilesByEmail.get(member.email.toLowerCase());
+    const state = profile ? statesByUserId.get(profile.user_id) : undefined;
     return {
-      userId: row.user_id,
-      email: profile?.email || 'Unknown email',
-      name: profile?.full_name || profile?.email?.split('@')[0] || 'Unknown rep',
-      data: row.data,
-      updatedAt: row.updated_at
+      userId: profile?.user_id || member.email,
+      email: profile?.email || member.email,
+      name: profile?.full_name || member.email.split('@')[0],
+      data: state?.data || getEmptyAppData(),
+      updatedAt: state?.updated_at || profile?.updated_at || '',
+      hasCloudState: Boolean(state),
+      hasProfile: Boolean(profile)
     };
   });
+}
+
+function getEmptyAppData(): AppDataSnapshot {
+  return {
+    payScale: {
+      id: 'default',
+      tierType: 'retroactive',
+      tiers: [],
+      avgDealSize: null
+    },
+    goalPlans: [],
+    dailyEntries: [],
+    dailyGoals: [],
+    dailyDeals: [],
+    headToHead: []
+  };
 }
