@@ -21,17 +21,29 @@ alter table public.app_state enable row level security;
 alter table public.profiles enable row level security;
 alter table public.team_members enable row level security;
 
+create or replace function public.current_user_team_role()
+returns text
+language sql
+security definer
+set search_path = public
+as $$
+  select tm.role
+  from public.team_members tm
+  where lower(tm.email) = lower((select auth.jwt() ->> 'email'))
+  limit 1
+$$;
+
+revoke all on function public.current_user_team_role() from public;
+grant execute on function public.current_user_team_role() to authenticated;
+
 drop policy if exists "Team members can read team membership" on public.team_members;
 create policy "Team members can read team membership"
 on public.team_members
 for select
 to authenticated
 using (
-  exists (
-    select 1
-    from public.team_members tm
-    where lower(tm.email) = lower((select auth.jwt() ->> 'email'))
-  )
+  lower(email) = lower((select auth.jwt() ->> 'email'))
+  or public.current_user_team_role() = 'manager'
 );
 
 drop policy if exists "Users can upsert their own profile" on public.profiles;
@@ -56,12 +68,7 @@ for select
 to authenticated
 using (
   (select auth.uid()) = user_id
-  or exists (
-    select 1
-    from public.team_members tm
-    where lower(tm.email) = lower((select auth.jwt() ->> 'email'))
-      and tm.role = 'manager'
-  )
+  or public.current_user_team_role() = 'manager'
 );
 
 drop policy if exists "Users can read their own app state" on public.app_state;
@@ -71,12 +78,7 @@ for select
 to authenticated
 using (
   (select auth.uid()) = user_id
-  or exists (
-    select 1
-    from public.team_members tm
-    where lower(tm.email) = lower((select auth.jwt() ->> 'email'))
-      and tm.role = 'manager'
-  )
+  or public.current_user_team_role() = 'manager'
 );
 
 drop policy if exists "Users can insert their own app state" on public.app_state;
@@ -85,6 +87,12 @@ on public.app_state
 for insert
 to authenticated
 with check ((select auth.uid()) = user_id);
+
+insert into public.team_members (email, role) values
+  ('corbin@leaseend.com', 'manager'),
+  ('corbinbrandonwilliams@gmail.com', 'member'),
+  ('parker.jackson@leaseend.com', 'member')
+on conflict (email) do update set role = excluded.role;
 
 drop policy if exists "Users can update their own app state" on public.app_state;
 create policy "Users can update their own app state"
