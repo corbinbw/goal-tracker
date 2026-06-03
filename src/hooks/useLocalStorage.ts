@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { PayScale, GoalPlan, DailyEntry, DailyGoal, DailyDeal, HeadToHeadCompetition, HeadToHeadEntry } from '@/lib/types';
+import { PayScale, GoalPlan, DailyEntry, DailyGoal, DailyDeal, HeadToHeadCompetition, HeadToHeadEntry, DailyActivity, DailyLead } from '@/lib/types';
 import * as storage from '@/lib/storage';
 
 export function usePayScale() {
@@ -219,6 +219,56 @@ export function useHeadToHeadCompetition() {
     saveCompetition,
     addBuddyEntry,
     deleteBuddyEntry,
+    refresh
+  };
+}
+
+export function useDailyActivity(date: string) {
+  const [activity, setActivityState] = useState<DailyActivity | null>(null);
+  const [leads, setLeadsState] = useState<DailyLead[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  const refresh = useCallback(() => {
+    setActivityState(storage.getDailyActivity(date));
+    setLeadsState(storage.getLeadsForDate(date));
+  }, [date]);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      refresh();
+      setLoading(false);
+    }, 0);
+    return () => window.clearTimeout(timer);
+  }, [refresh]);
+
+  const saveActivity = useCallback((nextActivity: DailyActivity) => {
+    storage.saveDailyActivity(nextActivity);
+    setActivityState(nextActivity);
+  }, []);
+
+  const addLead = useCallback((lead: DailyLead) => {
+    storage.saveDailyLead(lead);
+    setLeadsState(storage.getLeadsForDate(date));
+  }, [date]);
+
+  const updateLead = useCallback((lead: DailyLead) => {
+    storage.saveDailyLead(lead);
+    setLeadsState(storage.getLeadsForDate(date));
+  }, [date]);
+
+  const deleteLead = useCallback((leadId: string) => {
+    storage.deleteDailyLead(leadId);
+    setLeadsState(storage.getLeadsForDate(date));
+  }, [date]);
+
+  return {
+    activity,
+    leads,
+    loading,
+    saveActivity,
+    addLead,
+    updateLead,
+    deleteLead,
     refresh
   };
 }

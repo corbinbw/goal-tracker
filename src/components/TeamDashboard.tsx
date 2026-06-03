@@ -13,6 +13,8 @@ export default function TeamDashboard() {
 
   const rows = useMemo(() => members.map(member => {
     const dailyGoal = member.data.dailyGoals.find(goal => goal.date === selectedDate);
+    const selectedDateActivity = member.data.dailyActivities.find(activity => activity.date === selectedDate);
+    const selectedDateLeads = member.data.dailyLeads.filter(lead => lead.date === selectedDate);
     const selectedDateDeals = member.data.dailyDeals.filter(deal => deal.date === selectedDate);
     const selectedDateRevenue = selectedDateDeals.reduce((sum, deal) => sum + deal.revenue, 0);
     const selectedDateFunded = selectedDateDeals.filter(deal => deal.funded).reduce((sum, deal) => sum + deal.revenue, 0);
@@ -26,6 +28,9 @@ export default function TeamDashboard() {
     return {
       ...member,
       dailyGoal,
+      selectedDateActivity,
+      selectedDateLeads: selectedDateLeads.length,
+      selectedDatePitched: selectedDateLeads.filter(lead => lead.pitched).length,
       selectedDateRevenue,
       selectedDateFunded,
       selectedDateDeals: selectedDateDeals.length,
@@ -36,7 +41,9 @@ export default function TeamDashboard() {
         goals: member.data.dailyGoals.length,
         deals: member.data.dailyDeals.length,
         entries: member.data.dailyEntries.length,
-        plans: member.data.goalPlans.length
+        plans: member.data.goalPlans.length,
+        activities: member.data.dailyActivities.length,
+        leads: member.data.dailyLeads.length
       },
       syncState: !member.hasProfile
         ? 'Needs login'
@@ -48,6 +55,9 @@ export default function TeamDashboard() {
 
   const teamSelectedDateRevenue = rows.reduce((sum, row) => sum + row.selectedDateRevenue, 0);
   const teamSelectedDateFunded = rows.reduce((sum, row) => sum + row.selectedDateFunded, 0);
+  const teamSelectedDateCalls = rows.reduce((sum, row) => sum + (row.selectedDateActivity?.calls || 0), 0);
+  const teamSelectedDateTexts = rows.reduce((sum, row) => sum + (row.selectedDateActivity?.texts || 0), 0);
+  const teamSelectedDateLeads = rows.reduce((sum, row) => sum + row.selectedDateLeads, 0);
   const teamSignedRevenue = rows.reduce((sum, row) => sum + row.signedRevenue, 0);
   const teamFundedRevenue = rows.reduce((sum, row) => sum + row.fundedRevenue, 0);
 
@@ -104,6 +114,8 @@ export default function TeamDashboard() {
       <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <TeamStat label="Selected Day Signed" value={formatCurrency(teamSelectedDateRevenue)} />
         <TeamStat label="Selected Day Funded" value={formatCurrency(teamSelectedDateFunded)} />
+        <TeamStat label="Calls / Texts" value={`${teamSelectedDateCalls} / ${teamSelectedDateTexts}`} />
+        <TeamStat label="New Leads" value={teamSelectedDateLeads.toString()} />
         <TeamStat label="Period Signed" value={formatCurrency(teamSignedRevenue)} />
         <TeamStat label="Period Funded" value={formatCurrency(teamFundedRevenue)} />
       </section>
@@ -126,6 +138,8 @@ export default function TeamDashboard() {
                   <th className="px-4 py-3">Daily Goal</th>
                   <th className="px-4 py-3">Selected Day</th>
                   <th className="px-4 py-3">Deals</th>
+                  <th className="px-4 py-3">Calls / Texts</th>
+                  <th className="px-4 py-3">Leads</th>
                   <th className="px-4 py-3">Period Funded</th>
                   <th className="px-4 py-3">Period Signed</th>
                   <th className="px-4 py-3">Synced Data</th>
@@ -147,10 +161,16 @@ export default function TeamDashboard() {
                     </td>
                     <td className="px-4 py-3 font-semibold text-blue-700">{formatCurrency(row.selectedDateRevenue)}</td>
                     <td className="px-4 py-3 text-slate-700">{row.selectedDateDeals}</td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.selectedDateActivity?.calls || 0} / {row.selectedDateActivity?.texts || 0}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">
+                      {row.selectedDateLeads} ({row.selectedDatePitched} pitched)
+                    </td>
                     <td className="px-4 py-3 font-semibold text-emerald-700">{formatCurrency(row.fundedRevenue)}</td>
                     <td className="px-4 py-3 text-slate-700">{formatCurrency(row.signedRevenue)}</td>
                     <td className="px-4 py-3 text-xs text-slate-500">
-                      {row.dataCounts.goals} goals / {row.dataCounts.deals} deals / {row.dataCounts.entries} entries
+                      {row.dataCounts.goals} goals / {row.dataCounts.deals} deals / {row.dataCounts.entries} entries / {row.dataCounts.leads} leads
                     </td>
                     <td className="px-4 py-3 text-slate-500">{row.syncState}</td>
                     <td className="px-4 py-3 text-slate-500">{row.updatedAt ? formatUpdated(row.updatedAt) : '-'}</td>

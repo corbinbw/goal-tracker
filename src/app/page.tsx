@@ -1,11 +1,12 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { usePayScale, useGoalPlans, useDailyEntries, useDailyCountdown, useAllDailyDeals, useHeadToHeadCompetition } from '@/hooks/useLocalStorage';
+import { usePayScale, useGoalPlans, useDailyEntries, useDailyCountdown, useAllDailyDeals, useHeadToHeadCompetition, useDailyActivity } from '@/hooks/useLocalStorage';
 import PayScaleEditor from '@/components/PayScaleEditor';
 import NewGoalForm from '@/components/NewGoalForm';
 import Dashboard from '@/components/Dashboard';
 import DailyCountdown from '@/components/DailyCountdown';
+import ActivityTracker from '@/components/ActivityTracker';
 import HeadToHead from '@/components/HeadToHead';
 import TeamDashboard from '@/components/TeamDashboard';
 import AuthPanel, { getDisplayName } from '@/components/AuthPanel';
@@ -23,7 +24,7 @@ import {
   setCurrentLocalUserId
 } from '@/lib/storage';
 
-type Tab = 'today' | 'tracker' | 'team' | 'new-goal' | 'settings';
+type Tab = 'today' | 'activity' | 'tracker' | 'team' | 'new-goal' | 'settings';
 
 export default function Home() {
   const { payScale, setPayScale, loading: payScaleLoading } = usePayScale();
@@ -48,6 +49,15 @@ export default function Home() {
     deleteDeal,
     clearDeals
   } = useDailyCountdown(today, activePlan?.id || null);
+  const {
+    activity,
+    leads,
+    loading: activityLoading,
+    saveActivity,
+    addLead,
+    updateLead,
+    deleteLead
+  } = useDailyActivity(today);
 
   const [activeTab, setActiveTab] = useState<Tab>('today');
   const [mounted, setMounted] = useState(false);
@@ -154,7 +164,7 @@ export default function Home() {
     return () => document.removeEventListener('visibilitychange', saveWhenHidden);
   }, [user]);
 
-  if (!mounted || payScaleLoading || plansLoading || dailyLoading || allDealsLoading || competitionLoading || !dailyGoal) {
+  if (!mounted || payScaleLoading || plansLoading || dailyLoading || allDealsLoading || competitionLoading || activityLoading || !dailyGoal || !activity) {
     return (
       <div className="min-h-screen bg-stone-50 flex items-center justify-center">
         <div className="rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-600 shadow-sm">
@@ -384,6 +394,12 @@ export default function Home() {
               Today
             </TabButton>
             <TabButton
+              active={activeTab === 'activity'}
+              onClick={() => setActiveTab('activity')}
+            >
+              Activity
+            </TabButton>
+            <TabButton
               active={activeTab === 'tracker'}
               onClick={() => setActiveTab('tracker')}
             >
@@ -445,6 +461,30 @@ export default function Home() {
               }}
             />
           </div>
+        )}
+
+        {activeTab === 'activity' && (
+          <ActivityTracker
+            date={today}
+            activity={activity}
+            leads={leads}
+            onSaveActivity={(nextActivity) => {
+              saveActivity(nextActivity);
+              queueCloudSave();
+            }}
+            onAddLead={(lead) => {
+              addLead(lead);
+              queueCloudSave();
+            }}
+            onUpdateLead={(lead) => {
+              updateLead(lead);
+              queueCloudSave();
+            }}
+            onDeleteLead={(leadId) => {
+              deleteLead(leadId);
+              queueCloudSave();
+            }}
+          />
         )}
 
         {activeTab === 'tracker' && activePlan && (

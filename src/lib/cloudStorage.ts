@@ -70,7 +70,7 @@ export async function loadCloudState(user: User): Promise<AppDataSnapshot | null
     .maybeSingle<Pick<CloudStateRow, 'data'>>();
 
   if (error) throw error;
-  return data?.data || null;
+  return data?.data ? normalizeAppData(data.data) : null;
 }
 
 export async function saveCloudState(user: User): Promise<void> {
@@ -90,7 +90,7 @@ export async function saveCloudState(user: User): Promise<void> {
 }
 
 export function applyCloudState(data: AppDataSnapshot): void {
-  importAppData(data);
+  importAppData(normalizeAppData(data));
 }
 
 export async function loadTeamStates(): Promise<TeamMemberState[]> {
@@ -129,12 +129,25 @@ export async function loadTeamStates(): Promise<TeamMemberState[]> {
       userId: profile?.user_id || member.email,
       email: profile?.email || member.email,
       name: profile?.full_name || member.email.split('@')[0],
-      data: state?.data || getEmptyAppData(),
+      data: state?.data ? normalizeAppData(state.data) : getEmptyAppData(),
       updatedAt: state?.updated_at || profile?.updated_at || '',
       hasCloudState: Boolean(state),
       hasProfile: Boolean(profile)
     };
   });
+}
+
+function normalizeAppData(data: Partial<AppDataSnapshot>): AppDataSnapshot {
+  return {
+    payScale: data.payScale || getEmptyAppData().payScale,
+    goalPlans: Array.isArray(data.goalPlans) ? data.goalPlans : [],
+    dailyEntries: Array.isArray(data.dailyEntries) ? data.dailyEntries : [],
+    dailyGoals: Array.isArray(data.dailyGoals) ? data.dailyGoals : [],
+    dailyDeals: Array.isArray(data.dailyDeals) ? data.dailyDeals : [],
+    headToHead: Array.isArray(data.headToHead) ? data.headToHead : [],
+    dailyActivities: Array.isArray(data.dailyActivities) ? data.dailyActivities : [],
+    dailyLeads: Array.isArray(data.dailyLeads) ? data.dailyLeads : []
+  };
 }
 
 function getEmptyAppData(): AppDataSnapshot {
@@ -149,6 +162,8 @@ function getEmptyAppData(): AppDataSnapshot {
     dailyEntries: [],
     dailyGoals: [],
     dailyDeals: [],
-    headToHead: []
+    headToHead: [],
+    dailyActivities: [],
+    dailyLeads: []
   };
 }

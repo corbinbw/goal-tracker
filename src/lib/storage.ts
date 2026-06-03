@@ -1,4 +1,4 @@
-import { PayScale, GoalPlan, DailyEntry, DailyGoal, DailyDeal, HeadToHeadCompetition, HeadToHeadEntry, DEFAULT_PAY_SCALE } from './types';
+import { PayScale, GoalPlan, DailyEntry, DailyGoal, DailyDeal, HeadToHeadCompetition, HeadToHeadEntry, DailyActivity, DailyLead, DEFAULT_PAY_SCALE } from './types';
 
 const STORAGE_KEYS = {
   PAY_SCALE: 'goalTracker_payScale',
@@ -7,6 +7,8 @@ const STORAGE_KEYS = {
   DAILY_GOALS: 'goalTracker_dailyGoals',
   DAILY_DEALS: 'goalTracker_dailyDeals',
   HEAD_TO_HEAD: 'goalTracker_headToHead',
+  DAILY_ACTIVITIES: 'goalTracker_dailyActivities',
+  DAILY_LEADS: 'goalTracker_dailyLeads',
   BACKUPS: 'goalTracker_backups',
   CURRENT_USER: 'goalTracker_currentUserId',
 };
@@ -18,6 +20,8 @@ export interface AppDataSnapshot {
   dailyGoals: DailyGoal[];
   dailyDeals: DailyDeal[];
   headToHead: HeadToHeadCompetition[];
+  dailyActivities: DailyActivity[];
+  dailyLeads: DailyLead[];
 }
 
 export interface AppDataBackup {
@@ -306,6 +310,88 @@ export function deleteHeadToHeadEntry(competitionId: string, entryId: string): v
   saveHeadToHeadCompetitions(competitions);
 }
 
+// Daily Activity
+export function getDailyActivities(): DailyActivity[] {
+  if (typeof window === 'undefined') return [];
+
+  const stored = localStorage.getItem(STORAGE_KEYS.DAILY_ACTIVITIES);
+  if (!stored) return [];
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function saveDailyActivities(activities: DailyActivity[]): void {
+  localStorage.setItem(STORAGE_KEYS.DAILY_ACTIVITIES, JSON.stringify(activities));
+}
+
+export function getDailyActivity(date: string): DailyActivity {
+  const existing = getDailyActivities().find(activity => activity.date === date);
+
+  return existing || {
+    date,
+    calls: 0,
+    texts: 0,
+    updatedAt: new Date().toISOString()
+  };
+}
+
+export function saveDailyActivity(activity: DailyActivity): void {
+  const activities = getDailyActivities();
+  const existingIndex = activities.findIndex(item => item.date === activity.date);
+
+  if (existingIndex >= 0) {
+    activities[existingIndex] = activity;
+  } else {
+    activities.push(activity);
+  }
+
+  saveDailyActivities(activities);
+}
+
+export function getDailyLeads(): DailyLead[] {
+  if (typeof window === 'undefined') return [];
+
+  const stored = localStorage.getItem(STORAGE_KEYS.DAILY_LEADS);
+  if (!stored) return [];
+
+  try {
+    return JSON.parse(stored);
+  } catch {
+    return [];
+  }
+}
+
+export function saveDailyLeads(leads: DailyLead[]): void {
+  localStorage.setItem(STORAGE_KEYS.DAILY_LEADS, JSON.stringify(leads));
+}
+
+export function getLeadsForDate(date: string): DailyLead[] {
+  return getDailyLeads()
+    .filter(lead => lead.date === date)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+export function saveDailyLead(lead: DailyLead): void {
+  const leads = getDailyLeads();
+  const existingIndex = leads.findIndex(item => item.id === lead.id);
+
+  if (existingIndex >= 0) {
+    leads[existingIndex] = lead;
+  } else {
+    leads.push(lead);
+  }
+
+  saveDailyLeads(leads);
+}
+
+export function deleteDailyLead(leadId: string): void {
+  saveDailyLeads(getDailyLeads().filter(lead => lead.id !== leadId));
+}
+
 export function exportAppData(): AppDataSnapshot {
   return {
     payScale: getPayScale(),
@@ -313,7 +399,9 @@ export function exportAppData(): AppDataSnapshot {
     dailyEntries: getDailyEntries(),
     dailyGoals: getDailyGoals(),
     dailyDeals: getDailyDeals(),
-    headToHead: getHeadToHeadCompetitions()
+    headToHead: getHeadToHeadCompetitions(),
+    dailyActivities: getDailyActivities(),
+    dailyLeads: getDailyLeads()
   };
 }
 
@@ -324,6 +412,8 @@ export function importAppData(data: Partial<AppDataSnapshot>): void {
   if (Array.isArray(data.dailyGoals)) saveDailyGoals(data.dailyGoals);
   if (Array.isArray(data.dailyDeals)) saveDailyDeals(data.dailyDeals);
   if (Array.isArray(data.headToHead)) saveHeadToHeadCompetitions(data.headToHead);
+  if (Array.isArray(data.dailyActivities)) saveDailyActivities(data.dailyActivities);
+  if (Array.isArray(data.dailyLeads)) saveDailyLeads(data.dailyLeads);
 }
 
 export function clearAppData(): void {
@@ -333,6 +423,8 @@ export function clearAppData(): void {
   localStorage.removeItem(STORAGE_KEYS.DAILY_GOALS);
   localStorage.removeItem(STORAGE_KEYS.DAILY_DEALS);
   localStorage.removeItem(STORAGE_KEYS.HEAD_TO_HEAD);
+  localStorage.removeItem(STORAGE_KEYS.DAILY_ACTIVITIES);
+  localStorage.removeItem(STORAGE_KEYS.DAILY_LEADS);
 }
 
 export function getCurrentLocalUserId(): string | null {
@@ -350,8 +442,10 @@ export function hasMeaningfulAppData(data: Partial<AppDataSnapshot> = exportAppD
   const hasDeals = Array.isArray(data.dailyDeals) && data.dailyDeals.length > 0;
   const hasCompetitions = Array.isArray(data.headToHead) && data.headToHead.length > 0;
   const hasGoals = Array.isArray(data.dailyGoals) && data.dailyGoals.some(goal => goal.revenueGoal > 0 || goal.closeGoal > 0);
+  const hasActivity = Array.isArray(data.dailyActivities) && data.dailyActivities.some(activity => activity.calls > 0 || activity.texts > 0);
+  const hasLeads = Array.isArray(data.dailyLeads) && data.dailyLeads.length > 0;
 
-  return hasPlans || hasEntries || hasDeals || hasCompetitions || hasGoals;
+  return hasPlans || hasEntries || hasDeals || hasCompetitions || hasGoals || hasActivity || hasLeads;
 }
 
 export function getLocalBackups(): AppDataBackup[] {

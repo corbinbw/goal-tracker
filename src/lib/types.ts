@@ -71,6 +71,23 @@ export interface HeadToHeadCompetition {
   buddyEntries: HeadToHeadEntry[];
 }
 
+export interface DailyActivity {
+  date: string; // ISO date string YYYY-MM-DD
+  calls: number;
+  texts: number;
+  updatedAt: string;
+}
+
+export interface DailyLead {
+  id: string;
+  date: string; // ISO date string YYYY-MM-DD
+  name: string;
+  source?: string | null;
+  notes?: string | null;
+  pitched: boolean;
+  createdAt: string;
+}
+
 export interface DashboardStats {
   revenueGoal: number;
   revenueSoFar: number;
