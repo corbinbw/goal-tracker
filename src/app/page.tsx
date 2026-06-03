@@ -311,6 +311,31 @@ export default function Home() {
     window.setTimeout(() => window.location.reload(), 250);
   };
 
+  const activityTracker = (initialFocusMode = false) => (
+    <ActivityTracker
+      date={today}
+      activity={activity}
+      leads={leads}
+      initialFocusMode={initialFocusMode}
+      onSaveActivity={(nextActivity) => {
+        saveActivity(nextActivity);
+        queueCloudSave();
+      }}
+      onAddLead={(lead) => {
+        addLead(lead);
+        queueCloudSave();
+      }}
+      onUpdateLead={(lead) => {
+        updateLead(lead);
+        queueCloudSave();
+      }}
+      onDeleteLead={(leadId) => {
+        deleteLead(leadId);
+        queueCloudSave();
+      }}
+    />
+  );
+
   if (isSupabaseConfigured && !user) {
     return (
       <div className={`app-shell min-h-screen ${theme === 'dark' ? 'theme-dark' : ''}`}>
@@ -340,6 +365,20 @@ export default function Home() {
             onCreateBackup={createBackup}
             onRestoreBackup={restoreBackup}
           />
+        </main>
+      </div>
+    );
+  }
+
+  const focusParam = typeof window !== 'undefined'
+    ? new URLSearchParams(window.location.search).get('focus')
+    : null;
+
+  if (focusParam === 'activity') {
+    return (
+      <div className={`app-shell min-h-screen ${theme === 'dark' ? 'theme-dark' : ''}`}>
+        <main className="mx-auto max-w-md px-3 py-3">
+          {activityTracker(true)}
         </main>
       </div>
     );
@@ -464,27 +503,7 @@ export default function Home() {
         )}
 
         {activeTab === 'activity' && (
-          <ActivityTracker
-            date={today}
-            activity={activity}
-            leads={leads}
-            onSaveActivity={(nextActivity) => {
-              saveActivity(nextActivity);
-              queueCloudSave();
-            }}
-            onAddLead={(lead) => {
-              addLead(lead);
-              queueCloudSave();
-            }}
-            onUpdateLead={(lead) => {
-              updateLead(lead);
-              queueCloudSave();
-            }}
-            onDeleteLead={(leadId) => {
-              deleteLead(leadId);
-              queueCloudSave();
-            }}
-          />
+          activityTracker()
         )}
 
         {activeTab === 'tracker' && activePlan && (
