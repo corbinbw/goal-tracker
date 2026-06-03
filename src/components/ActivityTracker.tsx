@@ -49,6 +49,9 @@ export default function ActivityTracker({
       source: leadSource.trim() || null,
       notes: leadNotes.trim() || null,
       pitched: false,
+      called: false,
+      texted: false,
+      contacted: false,
       createdAt: new Date().toISOString()
     });
     setLeadName('');
@@ -152,17 +155,30 @@ export default function ActivityTracker({
                   </div>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button
-                    type="button"
+                  <LeadToggle
+                    active={Boolean(lead.called)}
+                    activeLabel="Called"
+                    inactiveLabel="Call"
+                    onClick={() => onUpdateLead({ ...lead, called: !lead.called })}
+                  />
+                  <LeadToggle
+                    active={Boolean(lead.texted)}
+                    activeLabel="Texted"
+                    inactiveLabel="Text"
+                    onClick={() => onUpdateLead({ ...lead, texted: !lead.texted })}
+                  />
+                  <LeadToggle
+                    active={Boolean(lead.contacted)}
+                    activeLabel="Contacted"
+                    inactiveLabel="Contact"
+                    onClick={() => onUpdateLead({ ...lead, contacted: !lead.contacted })}
+                  />
+                  <LeadToggle
+                    active={lead.pitched}
+                    activeLabel="Pitched"
+                    inactiveLabel="Pitch"
                     onClick={() => onUpdateLead({ ...lead, pitched: !lead.pitched })}
-                    className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                      lead.pitched
-                        ? 'bg-emerald-100 text-emerald-800'
-                        : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
-                    }`}
-                  >
-                    {lead.pitched ? 'Pitched' : 'Not Pitched'}
-                  </button>
+                  />
                   <button
                     type="button"
                     onClick={() => onDeleteLead(lead.id)}
@@ -177,6 +193,32 @@ export default function ActivityTracker({
         )}
       </section>
     </div>
+  );
+}
+
+function LeadToggle({
+  active,
+  activeLabel,
+  inactiveLabel,
+  onClick
+}: {
+  active: boolean;
+  activeLabel: string;
+  inactiveLabel: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+        active
+          ? 'bg-emerald-100 text-emerald-800'
+          : 'bg-stone-100 text-slate-600 hover:bg-stone-200'
+      }`}
+    >
+      {active ? activeLabel : inactiveLabel}
+    </button>
   );
 }
 

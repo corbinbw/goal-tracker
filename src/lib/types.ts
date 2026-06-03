@@ -85,6 +85,9 @@ export interface DailyLead {
   source?: string | null;
   notes?: string | null;
   pitched: boolean;
+  called?: boolean;
+  texted?: boolean;
+  contacted?: boolean;
   createdAt: string;
 }
 

@@ -31,6 +31,9 @@ export default function TeamDashboard() {
       selectedDateActivity,
       selectedDateLeads: selectedDateLeads.length,
       selectedDatePitched: selectedDateLeads.filter(lead => lead.pitched).length,
+      selectedDateCalled: selectedDateLeads.filter(lead => lead.called).length,
+      selectedDateTexted: selectedDateLeads.filter(lead => lead.texted).length,
+      selectedDateContacted: selectedDateLeads.filter(lead => lead.contacted).length,
       selectedDateRevenue,
       selectedDateFunded,
       selectedDateDeals: selectedDateDeals.length,
@@ -58,6 +61,7 @@ export default function TeamDashboard() {
   const teamSelectedDateCalls = rows.reduce((sum, row) => sum + (row.selectedDateActivity?.calls || 0), 0);
   const teamSelectedDateTexts = rows.reduce((sum, row) => sum + (row.selectedDateActivity?.texts || 0), 0);
   const teamSelectedDateLeads = rows.reduce((sum, row) => sum + row.selectedDateLeads, 0);
+  const teamSelectedDateContacted = rows.reduce((sum, row) => sum + row.selectedDateContacted, 0);
   const teamSignedRevenue = rows.reduce((sum, row) => sum + row.signedRevenue, 0);
   const teamFundedRevenue = rows.reduce((sum, row) => sum + row.fundedRevenue, 0);
 
@@ -115,7 +119,7 @@ export default function TeamDashboard() {
         <TeamStat label="Selected Day Signed" value={formatCurrency(teamSelectedDateRevenue)} />
         <TeamStat label="Selected Day Funded" value={formatCurrency(teamSelectedDateFunded)} />
         <TeamStat label="Calls / Texts" value={`${teamSelectedDateCalls} / ${teamSelectedDateTexts}`} />
-        <TeamStat label="New Leads" value={teamSelectedDateLeads.toString()} />
+        <TeamStat label="Leads Contacted" value={`${teamSelectedDateContacted} / ${teamSelectedDateLeads}`} />
         <TeamStat label="Period Signed" value={formatCurrency(teamSignedRevenue)} />
         <TeamStat label="Period Funded" value={formatCurrency(teamFundedRevenue)} />
       </section>
@@ -165,7 +169,7 @@ export default function TeamDashboard() {
                       {row.selectedDateActivity?.calls || 0} / {row.selectedDateActivity?.texts || 0}
                     </td>
                     <td className="px-4 py-3 text-slate-700">
-                      {row.selectedDateLeads} ({row.selectedDatePitched} pitched)
+                      {row.selectedDateLeads} ({row.selectedDateContacted} contacted / {row.selectedDatePitched} pitched)
                     </td>
                     <td className="px-4 py-3 font-semibold text-emerald-700">{formatCurrency(row.fundedRevenue)}</td>
                     <td className="px-4 py-3 text-slate-700">{formatCurrency(row.signedRevenue)}</td>
