@@ -331,22 +331,40 @@ export function saveDailyActivities(activities: DailyActivity[]): void {
 export function getDailyActivity(date: string): DailyActivity {
   const existing = getDailyActivities().find(activity => activity.date === date);
 
-  return existing || {
+  return {
+    ...existing,
     date,
-    calls: 0,
-    texts: 0,
-    updatedAt: new Date().toISOString()
+    calls: existing?.calls || 0,
+    texts: existing?.texts || 0,
+    contacts: existing?.contacts || 0,
+    appointments: existing?.appointments || 0,
+    voicemails: existing?.voicemails || 0,
+    callBacks: existing?.callBacks || 0,
+    crmUpdates: existing?.crmUpdates || 0,
+    sales: existing?.sales || 0,
+    updatedAt: existing?.updatedAt || new Date().toISOString()
   };
 }
 
 export function saveDailyActivity(activity: DailyActivity): void {
   const activities = getDailyActivities();
   const existingIndex = activities.findIndex(item => item.date === activity.date);
+  const nextActivity = {
+    ...activity,
+    calls: activity.calls || 0,
+    texts: activity.texts || 0,
+    contacts: activity.contacts || 0,
+    appointments: activity.appointments || 0,
+    voicemails: activity.voicemails || 0,
+    callBacks: activity.callBacks || 0,
+    crmUpdates: activity.crmUpdates || 0,
+    sales: activity.sales || 0
+  };
 
   if (existingIndex >= 0) {
-    activities[existingIndex] = activity;
+    activities[existingIndex] = nextActivity;
   } else {
-    activities.push(activity);
+    activities.push(nextActivity);
   }
 
   saveDailyActivities(activities);
@@ -442,7 +460,16 @@ export function hasMeaningfulAppData(data: Partial<AppDataSnapshot> = exportAppD
   const hasDeals = Array.isArray(data.dailyDeals) && data.dailyDeals.length > 0;
   const hasCompetitions = Array.isArray(data.headToHead) && data.headToHead.length > 0;
   const hasGoals = Array.isArray(data.dailyGoals) && data.dailyGoals.some(goal => goal.revenueGoal > 0 || goal.closeGoal > 0);
-  const hasActivity = Array.isArray(data.dailyActivities) && data.dailyActivities.some(activity => activity.calls > 0 || activity.texts > 0);
+  const hasActivity = Array.isArray(data.dailyActivities) && data.dailyActivities.some(activity =>
+    activity.calls > 0 ||
+    activity.texts > 0 ||
+    (activity.contacts || 0) > 0 ||
+    (activity.appointments || 0) > 0 ||
+    (activity.voicemails || 0) > 0 ||
+    (activity.callBacks || 0) > 0 ||
+    (activity.crmUpdates || 0) > 0 ||
+    (activity.sales || 0) > 0
+  );
   const hasLeads = Array.isArray(data.dailyLeads) && data.dailyLeads.length > 0;
 
   return hasPlans || hasEntries || hasDeals || hasCompetitions || hasGoals || hasActivity || hasLeads;

@@ -51,6 +51,7 @@ export default function Home() {
   } = useDailyCountdown(today, activePlan?.id || null);
   const {
     activity,
+    activities,
     leads,
     loading: activityLoading,
     saveActivity,
@@ -315,6 +316,7 @@ export default function Home() {
     <ActivityTracker
       date={today}
       activity={activity}
+      activities={activities}
       leads={leads}
       initialFocusMode={initialFocusMode}
       onSaveActivity={(nextActivity) => {

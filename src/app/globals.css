@@ -155,6 +155,10 @@ select {
   background-color: #26302b !important;
 }
 
+.theme-dark .bg-blue-50 {
+  background-color: #172338 !important;
+}
+
 .theme-dark .bg-blue-700 {
   background-color: #2563eb !important;
 }

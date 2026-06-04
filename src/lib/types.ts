@@ -75,6 +75,12 @@ export interface DailyActivity {
   date: string; // ISO date string YYYY-MM-DD
   calls: number;
   texts: number;
+  contacts?: number;
+  appointments?: number;
+  voicemails?: number;
+  callBacks?: number;
+  crmUpdates?: number;
+  sales?: number;
   updatedAt: string;
 }
 

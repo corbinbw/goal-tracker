@@ -7,6 +7,7 @@ import { generateId } from '@/lib/calculations';
 interface Props {
   date: string;
   activity: DailyActivity;
+  activities: DailyActivity[];
   leads: DailyLead[];
   onSaveActivity: (activity: DailyActivity) => void;
   onAddLead: (lead: DailyLead) => void;
@@ -18,6 +19,7 @@ interface Props {
 export default function ActivityTracker({
   date,
   activity,
+  activities,
   leads,
   onSaveActivity,
   onAddLead,
@@ -32,6 +34,10 @@ export default function ActivityTracker({
 
   const pitchedCount = leads.filter(lead => lead.pitched).length;
   const pitchRate = leads.length > 0 ? Math.round((pitchedCount / leads.length) * 100) : 0;
+  const weekDays = getCurrentWeekDays(date);
+  const activityByDate = new Map(activities.map(item => [item.date, normalizeActivity(item)]));
+  activityByDate.set(date, normalizeActivity(activity));
+  const weekTotals = sumActivities(weekDays.map(day => activityByDate.get(day.date)));
 
   const updateActivity = (updates: Partial<DailyActivity>) => {
     onSaveActivity({
@@ -106,7 +112,7 @@ export default function ActivityTracker({
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <p className="text-xs font-semibold uppercase tracking-[0.14em] text-blue-700">Activity</p>
-            <h2 className="mt-1 text-2xl font-semibold text-slate-950">Calls, texts, and new leads</h2>
+            <h2 className="mt-1 text-2xl font-semibold text-slate-950">Prospecting call sheet</h2>
             <p className="mt-1 text-sm text-slate-500">{formatLongDate(date)}</p>
           </div>
           <div className="text-sm text-slate-500 sm:text-right">
@@ -131,9 +137,9 @@ export default function ActivityTracker({
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-3">
+      <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <CounterCard
-          label="Calls"
+          label="Dials"
           value={activity.calls}
           onChange={(value) => updateActivity({ calls: value })}
         />
@@ -142,6 +148,84 @@ export default function ActivityTracker({
           value={activity.texts}
           onChange={(value) => updateActivity({ texts: value })}
         />
+        <CounterCard
+          label="Contacts"
+          value={activity.contacts || 0}
+          onChange={(value) => updateActivity({ contacts: value })}
+        />
+        <CounterCard
+          label="Appointments"
+          value={activity.appointments || 0}
+          onChange={(value) => updateActivity({ appointments: value })}
+        />
+        <CounterCard
+          label="Voicemails"
+          value={activity.voicemails || 0}
+          onChange={(value) => updateActivity({ voicemails: value })}
+        />
+        <CounterCard
+          label="Call Backs"
+          value={activity.callBacks || 0}
+          onChange={(value) => updateActivity({ callBacks: value })}
+        />
+        <CounterCard
+          label="CRM Updates"
+          value={activity.crmUpdates || 0}
+          onChange={(value) => updateActivity({ crmUpdates: value })}
+        />
+        <CounterCard
+          label="Sales"
+          value={activity.sales || 0}
+          onChange={(value) => updateActivity({ sales: value })}
+        />
+      </section>
+
+      <section className="overflow-hidden rounded-lg border border-stone-200 bg-white shadow-sm">
+        <div className="border-b border-stone-200 bg-stone-50 p-4">
+          <h3 className="font-semibold text-slate-950">Weekly Call Sheet</h3>
+          <p className="mt-1 text-sm text-slate-500">Monday through Friday totals based on your daily activity.</p>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="min-w-[760px] w-full text-left text-sm">
+            <thead className="bg-orange-600 text-white">
+              <tr>
+                <th className="px-4 py-3 font-semibold">Day</th>
+                {callSheetMetrics.map(metric => (
+                  <th key={metric.key} className="px-4 py-3 font-semibold">{metric.label}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-stone-200">
+              {weekDays.map(day => {
+                const dayActivity = activityByDate.get(day.date);
+                return (
+                  <tr key={day.date} className={day.date === date ? 'bg-blue-50' : 'bg-white'}>
+                    <th className="px-4 py-3 font-semibold text-slate-950">
+                      <div>{day.label}</div>
+                      <div className="text-xs font-normal text-slate-500">{formatShortDate(day.date)}</div>
+                    </th>
+                    {callSheetMetrics.map(metric => (
+                      <td key={metric.key} className="px-4 py-3 font-semibold text-slate-700">
+                        {getMetricValue(dayActivity, metric.key)}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })}
+              <tr className="bg-stone-50">
+                <th className="px-4 py-3 font-semibold text-slate-950">Total</th>
+                {callSheetMetrics.map(metric => (
+                  <td key={metric.key} className="px-4 py-3 font-semibold text-slate-950">
+                    {getMetricValue(weekTotals, metric.key)}
+                  </td>
+                ))}
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-lg border border-stone-200 bg-white p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.14em] text-slate-500">New Leads</div>
           <div className="mt-1 text-4xl font-semibold text-slate-950">{leads.length}</div>
@@ -250,6 +334,72 @@ export default function ActivityTracker({
   );
 }
 
+type CallSheetMetricKey = 'calls' | 'contacts' | 'appointments' | 'voicemails' | 'callBacks' | 'crmUpdates' | 'sales';
+
+const callSheetMetrics: { key: CallSheetMetricKey; label: string }[] = [
+  { key: 'calls', label: 'Dials' },
+  { key: 'contacts', label: 'Contacts' },
+  { key: 'appointments', label: 'Appointments' },
+  { key: 'voicemails', label: 'Voicemails' },
+  { key: 'callBacks', label: 'Call Backs' },
+  { key: 'crmUpdates', label: 'CRM Updates' },
+  { key: 'sales', label: 'Sales' }
+];
+
+function normalizeActivity(activity?: DailyActivity): DailyActivity {
+  return {
+    date: activity?.date || '',
+    calls: activity?.calls || 0,
+    texts: activity?.texts || 0,
+    contacts: activity?.contacts || 0,
+    appointments: activity?.appointments || 0,
+    voicemails: activity?.voicemails || 0,
+    callBacks: activity?.callBacks || 0,
+    crmUpdates: activity?.crmUpdates || 0,
+    sales: activity?.sales || 0,
+    updatedAt: activity?.updatedAt || ''
+  };
+}
+
+function getMetricValue(activity: DailyActivity | undefined, key: CallSheetMetricKey): number {
+  if (!activity) return 0;
+  return activity[key] || 0;
+}
+
+function sumActivities(activities: (DailyActivity | undefined)[]): DailyActivity {
+  return activities.reduce<DailyActivity>((total, item) => {
+    const activity = normalizeActivity(item);
+    return {
+      ...total,
+      calls: total.calls + activity.calls,
+      texts: total.texts + activity.texts,
+      contacts: (total.contacts || 0) + (activity.contacts || 0),
+      appointments: (total.appointments || 0) + (activity.appointments || 0),
+      voicemails: (total.voicemails || 0) + (activity.voicemails || 0),
+      callBacks: (total.callBacks || 0) + (activity.callBacks || 0),
+      crmUpdates: (total.crmUpdates || 0) + (activity.crmUpdates || 0),
+      sales: (total.sales || 0) + (activity.sales || 0)
+    };
+  }, normalizeActivity());
+}
+
+function getCurrentWeekDays(date: string): { date: string; label: string }[] {
+  const selectedDate = new Date(`${date}T00:00:00`);
+  const day = selectedDate.getDay();
+  const diffToMonday = day === 0 ? -6 : 1 - day;
+  const monday = new Date(selectedDate);
+  monday.setDate(selectedDate.getDate() + diffToMonday);
+
+  return ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'].map((label, index) => {
+    const itemDate = new Date(monday);
+    itemDate.setDate(monday.getDate() + index);
+    return {
+      date: itemDate.toISOString().slice(0, 10),
+      label
+    };
+  });
+}
+
 function LeadToggle({
   active,
   activeLabel,
@@ -327,6 +477,13 @@ function formatLongDate(date: string): string {
   return new Intl.DateTimeFormat('en-US', {
     weekday: 'long',
     month: 'long',
+    day: 'numeric'
+  }).format(new Date(`${date}T00:00:00`));
+}
+
+function formatShortDate(date: string): string {
+  return new Intl.DateTimeFormat('en-US', {
+    month: 'short',
     day: 'numeric'
   }).format(new Date(`${date}T00:00:00`));
 }

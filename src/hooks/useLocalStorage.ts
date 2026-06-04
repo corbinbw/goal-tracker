@@ -225,11 +225,13 @@ export function useHeadToHeadCompetition() {
 
 export function useDailyActivity(date: string) {
   const [activity, setActivityState] = useState<DailyActivity | null>(null);
+  const [activities, setActivitiesState] = useState<DailyActivity[]>([]);
   const [leads, setLeadsState] = useState<DailyLead[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(() => {
     setActivityState(storage.getDailyActivity(date));
+    setActivitiesState(storage.getDailyActivities());
     setLeadsState(storage.getLeadsForDate(date));
   }, [date]);
 
@@ -244,6 +246,7 @@ export function useDailyActivity(date: string) {
   const saveActivity = useCallback((nextActivity: DailyActivity) => {
     storage.saveDailyActivity(nextActivity);
     setActivityState(nextActivity);
+    setActivitiesState(storage.getDailyActivities());
   }, []);
 
   const addLead = useCallback((lead: DailyLead) => {
@@ -263,6 +266,7 @@ export function useDailyActivity(date: string) {
 
   return {
     activity,
+    activities,
     leads,
     loading,
     saveActivity,
